@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>78758121359-1ffu972pugh765dqipqe0vg1nqi4o6dp.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.78758121359-1ffu972pugh765dqipqe0vg1nqi4o6dp</string>
+	<key>API_KEY</key>
+	<string>AIzaSyD9cZADsnENOewMqSwTeRf52i7BBYCzQmo</string>
+	<key>GCM_SENDER_ID</key>
+	<string>78758121359</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.moneytor</string>
+	<key>PROJECT_ID</key>
+	<string>moneytor-e0622</string>
+	<key>STORAGE_BUCKET</key>
+	<string>moneytor-e0622.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:78758121359:ios:9a54a09ef0667eae1fc5fa</string>
+</dict>
+</plist>
