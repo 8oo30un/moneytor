@@ -34,10 +34,14 @@ class LoginPage extends StatelessWidget {
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 70,
+                      horizontal: 80,
                       vertical: 1,
                     ),
                     textStyle: const TextStyle(fontSize: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10), // 라운드 반경 조절
+                    ),
+                    shadowColor: Colors.grey.withOpacity(0.1), // 그림자 색상 조절
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -49,10 +53,14 @@ class LoginPage extends StatelessWidget {
                     backgroundColor: Color(0xFF91D8F7),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 63,
+                      horizontal: 73,
                       vertical: 1,
                     ),
                     textStyle: const TextStyle(fontSize: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10), // 라운드 반경 조절
+                    ),
+                    shadowColor: Colors.grey.withOpacity(0.1), // 그림자 색상 조절
                   ),
                 ),
                 const SizedBox(height: 160),
