@@ -49,4 +49,6 @@ flutter_launcher_icons:
 
 # The following section is specific to Flutter packages.
 flutter:
+  assets:
+    - assets/icon/loginIcon.png
   uses-material-design: true
