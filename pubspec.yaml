@@ -51,4 +51,6 @@ flutter_launcher_icons:
 flutter:
   assets:
     - assets/icon/loginIcon.png
+    - assets/googleIcon.png
+    - assets/userIcon.png
   uses-material-design: true

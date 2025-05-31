@@ -32,6 +32,14 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  void _showLoginFields() {
+    _pageController.animateToPage(
+      1,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,8 +69,106 @@ class _LoginPageState extends State<LoginPage> {
                     controller: _pageController,
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
-                      _LoginButtons(onSignupPressed: goToSignup),
-                      _SignupButtons(onBackPressed: goToLogin),
+                      _LoginButtons(
+                        onSignupPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              final _formKey = GlobalKey<FormState>();
+                              final TextEditingController idController =
+                                  TextEditingController();
+                              final TextEditingController passwordController =
+                                  TextEditingController();
+                              final TextEditingController confirmController =
+                                  TextEditingController();
+
+                              return AlertDialog(
+                                title: const Text('회원가입'),
+                                content: SingleChildScrollView(
+                                  child: Form(
+                                    key: _formKey,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        TextFormField(
+                                          controller: idController,
+                                          decoration: const InputDecoration(
+                                            labelText: '아이디',
+                                          ),
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return '아이디를 입력해주세요';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        TextFormField(
+                                          controller: passwordController,
+                                          decoration: const InputDecoration(
+                                            labelText: '비밀번호',
+                                          ),
+                                          obscureText: true,
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return '비밀번호를 입력해주세요';
+                                            }
+                                            final hasSpecial = RegExp(
+                                              r'[!@#$%^&*(),.?":{}|<>]',
+                                            ).hasMatch(value);
+                                            if (!hasSpecial) {
+                                              return '특수문자를 포함해야 합니다';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        TextFormField(
+                                          controller: confirmController,
+                                          decoration: const InputDecoration(
+                                            labelText: '비밀번호 확인',
+                                          ),
+                                          obscureText: true,
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return '비밀번호 확인을 입력해주세요';
+                                            }
+                                            if (value !=
+                                                passwordController.text) {
+                                              return '비밀번호가 일치하지 않습니다';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      if (_formKey.currentState!.validate()) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('회원가입 완료'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: const Text('제출'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        onLoginPressed: _showLoginFields,
+                      ),
+                      _LoginFields(onBackPressed: goToLogin),
                     ],
                   ),
                 ),
@@ -77,26 +183,64 @@ class _LoginPageState extends State<LoginPage> {
 
 class _LoginButtons extends StatelessWidget {
   final VoidCallback onSignupPressed;
+  final VoidCallback onLoginPressed;
 
-  const _LoginButtons({required this.onSignupPressed});
+  const _LoginButtons({
+    required this.onSignupPressed,
+    required this.onLoginPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ElevatedButton.icon(
-          onPressed: () {},
-          label: const Text('로그인'),
+        ElevatedButton(
+          onPressed: onLoginPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
             foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 43, vertical: 1),
             textStyle: const TextStyle(fontSize: 18),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
             shadowColor: Colors.grey.withOpacity(0.1),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/userIcon.png', width: 28, height: 28),
+              const SizedBox(width: 15),
+              const Text('회원 로그인'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        ElevatedButton(
+          onPressed: () {
+            // TODO: Add Google signup logic
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 1),
+            textStyle: const TextStyle(fontSize: 18),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            shadowColor: Colors.grey.withOpacity(0.1),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/googleIcon.png', width: 18, height: 18),
+              const SizedBox(width: 11),
+              const Text('  구글 로그인'),
+            ],
           ),
         ),
         const SizedBox(height: 20),
@@ -106,7 +250,7 @@ class _LoginButtons extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF91D8F7),
             foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 73, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 78, vertical: 1),
             textStyle: const TextStyle(fontSize: 18),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -114,155 +258,102 @@ class _LoginButtons extends StatelessWidget {
             shadowColor: Colors.grey.withOpacity(0.1),
           ),
         ),
-        const SizedBox(height: 120),
+        const SizedBox(height: 56),
       ],
     );
   }
 }
 
-class _SignupButtons extends StatelessWidget {
+class _LoginFields extends StatefulWidget {
   final VoidCallback onBackPressed;
 
-  const _SignupButtons({required this.onBackPressed});
+  const _LoginFields({required this.onBackPressed});
+
+  @override
+  State<_LoginFields> createState() => _LoginFieldsState();
+}
+
+class _LoginFieldsState extends State<_LoginFields> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController idController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    idController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  void _login() {
+    String? errorMessage;
+    if (idController.text.isEmpty) {
+      errorMessage = '아이디를 입력해주세요';
+    } else if (passwordController.text.isEmpty) {
+      errorMessage = '비밀번호를 입력해주세요';
+    }
+
+    if (errorMessage != null) {
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: const Text('로그인 실패'),
+              content: Text(errorMessage!),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('확인'),
+                ),
+              ],
+            ),
+      );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('로그인 성공')));
+      widget.onBackPressed();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ElevatedButton.icon(
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (context) {
-                final _formKey = GlobalKey<FormState>();
-                final TextEditingController idController =
-                    TextEditingController();
-                final TextEditingController passwordController =
-                    TextEditingController();
-                final TextEditingController confirmController =
-                    TextEditingController();
-
-                return AlertDialog(
-                  title: const Text('회원가입'),
-                  content: SingleChildScrollView(
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TextFormField(
-                            controller: idController,
-                            decoration: const InputDecoration(labelText: '아이디'),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return '아이디를 입력해주세요';
-                              }
-                              return null;
-                            },
-                          ),
-                          TextFormField(
-                            controller: passwordController,
-                            decoration: const InputDecoration(
-                              labelText: '비밀번호',
-                            ),
-                            obscureText: true,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return '비밀번호를 입력해주세요';
-                              }
-                              final hasSpecial = RegExp(
-                                r'[!@#$%^&*(),.?":{}|<>]',
-                              ).hasMatch(value);
-                              if (!hasSpecial) {
-                                return '특수문자를 포함해야 합니다';
-                              }
-                              return null;
-                            },
-                          ),
-                          TextFormField(
-                            controller: confirmController,
-                            decoration: const InputDecoration(
-                              labelText: '비밀번호 확인',
-                            ),
-                            obscureText: true,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return '비밀번호 확인을 입력해주세요';
-                              }
-                              if (value != passwordController.text) {
-                                return '비밀번호가 일치하지 않습니다';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('회원가입 완료')),
-                          );
-                        }
-                      },
-                      child: const Text('제출'),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-          label: const Text('회원아이디로 가입'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFAEE9DB),
-            foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 1),
-            textStyle: const TextStyle(fontSize: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            shadowColor: Colors.grey.withOpacity(0.1),
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextFormField(
+            controller: idController,
+            decoration: const InputDecoration(labelText: '아이디'),
           ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton.icon(
-          onPressed: () {
-            // TODO: Add Google signup logic
-          },
-          label: const Text('구글 로그인'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF4BA9DF),
-            foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 70, vertical: 1),
-            textStyle: const TextStyle(fontSize: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            shadowColor: Colors.grey.withOpacity(0.1),
+          TextFormField(
+            controller: passwordController,
+            decoration: const InputDecoration(labelText: '비밀번호'),
+            obscureText: true,
           ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton.icon(
-          onPressed: onBackPressed,
-          label: const Text('돌아가기'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 1),
-            textStyle: const TextStyle(fontSize: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _login,
+            child: const Text('로그인'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF91D8F7),
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 73, vertical: 1),
+              textStyle: const TextStyle(fontSize: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              shadowColor: Colors.grey.withOpacity(0.1),
             ),
-            shadowColor: Colors.grey.withOpacity(0.1),
           ),
-        ),
-        const SizedBox(height: 4),
-      ],
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: widget.onBackPressed,
+            child: const Text('뒤로가기'),
+          ),
+        ],
+      ),
     );
   }
 }
