@@ -29,12 +29,6 @@ flutter_ios_podfile_setup
 
 target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-
-  # 👇 추가: Firebase 포함 라이브러리에 modular headers 강제 적용
-  pod 'FirebaseCore', :modular_headers => true
-  pod 'FirebaseAuth', :modular_headers => true
-  pod 'GoogleUtilities', :modular_headers => true
-  pod 'Firebase', :modular_headers => true
 end
 
 post_install do |installer|

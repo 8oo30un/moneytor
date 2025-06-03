@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -147,16 +149,34 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () {
+                                    onPressed: () async {
                                       if (_formKey.currentState!.validate()) {
-                                        Navigator.pop(context);
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('회원가입 완료'),
-                                          ),
-                                        );
+                                        try {
+                                          await FirebaseAuth.instance
+                                              .createUserWithEmailAndPassword(
+                                                email: idController.text.trim(),
+                                                password:
+                                                    passwordController.text
+                                                        .trim(),
+                                              );
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('회원가입 완료'),
+                                            ),
+                                          );
+                                        } catch (e) {
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text('회원가입 실패: $e'),
+                                            ),
+                                          );
+                                        }
                                       }
                                     },
                                     child: const Text('제출'),
@@ -220,8 +240,28 @@ class _LoginButtons extends StatelessWidget {
         const SizedBox(height: 20),
 
         ElevatedButton(
-          onPressed: () {
-            // TODO: Add Google signup logic
+          onPressed: () async {
+            try {
+              final GoogleSignInAccount? googleUser =
+                  await GoogleSignIn().signIn();
+              if (googleUser == null) return;
+
+              final GoogleSignInAuthentication googleAuth =
+                  await googleUser.authentication;
+              final credential = GoogleAuthProvider.credential(
+                accessToken: googleAuth.accessToken,
+                idToken: googleAuth.idToken,
+              );
+
+              await FirebaseAuth.instance.signInWithCredential(credential);
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('구글 로그인 성공')));
+            } catch (e) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('구글 로그인 실패: $e')));
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
@@ -309,10 +349,33 @@ class _LoginFieldsState extends State<_LoginFields> {
             ),
       );
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('로그인 성공')));
-      widget.onBackPressed();
+      FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: idController.text.trim(),
+            password: passwordController.text.trim(),
+          )
+          .then((userCredential) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('로그인 성공')));
+            widget.onBackPressed();
+          })
+          .catchError((e) {
+            showDialog(
+              context: context,
+              builder:
+                  (context) => AlertDialog(
+                    title: const Text('로그인 실패'),
+                    content: Text('오류: $e'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('확인'),
+                      ),
+                    ],
+                  ),
+            );
+          });
     }
   }
 

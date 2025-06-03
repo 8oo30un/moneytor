@@ -41,9 +41,42 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleTypeRole</key>
+    <string>None</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>com.googleusercontent.apps.78758121359-1ffu972pugh765dqipqe0vg1nqi4o6dp</string>
+    </array>
+  </dict>
+</array>
+  <key>LSApplicationQueriesSchemes</key>
+  <array>
+    <string>google</string>
+    <string>com.googleusercontent.apps.78758121359-1ffu972pugh765daipqeOv</string>
+    <string>googlechrome</string>
+    <string>googlesignin</string>
+  </array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+<dict>
+  <key>NSAllowsArbitraryLoads</key>
+  <true/>
+  <key>NSExceptionDomains</key>
+  <dict>
+    <key>firebase.google.com</key>
+    <dict>
+      <key>NSExceptionAllowsInsecureHTTPLoads</key>
+      <true/>
+      <key>NSIncludesSubdomains</key>
+      <true/>
+    </dict>
+  </dict>
+</dict>
 </dict>
 </plist>
