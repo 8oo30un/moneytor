@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:moneytor/home.dart';
 import 'login.dart';
 
 void main() {
@@ -46,7 +47,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const LoginPage(),
+      home: const HomePage(),
     );
   }
 }

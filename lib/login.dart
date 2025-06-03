@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -102,6 +103,12 @@ class _LoginPageState extends State<LoginPage> {
                                                 value.isEmpty) {
                                               return '아이디를 입력해주세요';
                                             }
+                                            final emailRegex = RegExp(
+                                              r'^[^@]+@[^@]+\.[^@]+',
+                                            );
+                                            if (!emailRegex.hasMatch(value)) {
+                                              return '올바른 이메일 형식을 입력해주세요';
+                                            }
                                             return null;
                                           },
                                         ),
@@ -149,34 +156,46 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () async {
+                                    onPressed: () {
                                       if (_formKey.currentState!.validate()) {
-                                        try {
-                                          await FirebaseAuth.instance
-                                              .createUserWithEmailAndPassword(
-                                                email: idController.text.trim(),
-                                                password:
-                                                    passwordController.text
-                                                        .trim(),
+                                        FirebaseAuth.instance
+                                            .createUserWithEmailAndPassword(
+                                              email: idController.text.trim(),
+                                              password:
+                                                  passwordController.text
+                                                      .trim(),
+                                            )
+                                            .then((
+                                              UserCredential userCredential,
+                                            ) {
+                                              Navigator.pop(context);
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('회원가입 완료'),
+                                                  ),
+                                                );
+                                              }
+                                              debugPrint(
+                                                '✅ Firebase user created: ${userCredential.user?.uid}',
                                               );
-                                          Navigator.pop(context);
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('회원가입 완료'),
-                                            ),
-                                          );
-                                        } catch (e) {
-                                          Navigator.pop(context);
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text('회원가입 실패: $e'),
-                                            ),
-                                          );
-                                        }
+                                            })
+                                            .catchError((e) {
+                                              Navigator.pop(context);
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      '회원가입 실패: $e',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            });
                                       }
                                     },
                                     child: const Text('제출'),
@@ -254,6 +273,12 @@ class _LoginButtons extends StatelessWidget {
               );
 
               await FirebaseAuth.instance.signInWithCredential(credential);
+              if (context.mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomePage()),
+                );
+              }
               ScaffoldMessenger.of(
                 context,
               ).showSnackBar(const SnackBar(content: Text('구글 로그인 성공')));
@@ -358,7 +383,10 @@ class _LoginFieldsState extends State<_LoginFields> {
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(const SnackBar(content: Text('로그인 성공')));
-            widget.onBackPressed();
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomePage()),
+            );
           })
           .catchError((e) {
             showDialog(
