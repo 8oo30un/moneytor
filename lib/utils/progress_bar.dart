@@ -12,18 +12,32 @@ class ProgressBar extends StatelessWidget {
     required this.progress,
     this.color = Colors.blue,
     this.height = 16.0,
-    this.borderRadius = 20.0,
+    this.borderRadius = 6.0,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: LinearProgressIndicator(
-        value: progress.clamp(0.0, 1.0),
-        backgroundColor: Colors.grey.shade300,
-        color: color,
-        minHeight: height,
+    final clampedProgress = progress.clamp(0.0, 1.0);
+
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color.fromRGBO(246, 246, 248, 1),
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Stack(
+        children: [
+          FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: clampedProgress,
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(borderRadius),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -56,19 +70,11 @@ class BentoLabelBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      margin: const EdgeInsets.only(right: 2.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: Color.fromRGBO(247, 247, 249, 1),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -76,7 +82,7 @@ class BentoLabelBox extends StatelessWidget {
           if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 6)],
           Text(
             label,
-            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -100,7 +106,7 @@ class LabeledProgressBox extends StatelessWidget {
     return Row(
       children: [
         Expanded(child: ProgressBar(progress: progress, color: color)),
-        const SizedBox(width: 20),
+        const SizedBox(width: 4),
       ],
     );
   }
