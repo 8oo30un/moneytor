@@ -19,6 +19,9 @@ enum SortType { price, date }
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
+  int currentPageIndex = 0;
+  PageController pageController = PageController();
+  RegisterCardModel? selectedCard;
   int _selectedIndex = 2;
 
   bool isEditing = false;
@@ -52,12 +55,11 @@ class _HomePageState extends State<HomePage>
       photoUrl = user.photoURL;
       _registerCardRepo = RegisterCardRepository(userId: user.uid);
     } else {
-      // Provide a fallback or throw if user is null
-      _registerCardRepo = RegisterCardRepository(userId: 'unknown');
+      _registerCardRepo = RegisterCardRepository(userId: '');
     }
 
     monthlyGoal = 1000000;
-    todaySpending = 130000;
+    todaySpending = 500000;
 
     final status = calculateSpendingStatus(
       monthlyGoal: monthlyGoal,
@@ -426,177 +428,290 @@ class _HomePageState extends State<HomePage>
                     ),
                     const SizedBox(height: 16),
                     Expanded(
-                      child: GridView.count(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 1.25,
-                        children: [
-                          ...registerCards.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final card = entry.value;
-                            return AnimatedBuilder(
-                              animation: _shakeAnimation,
-                              builder: (context, child) {
-                                return Transform.rotate(
-                                  angle:
-                                      isEditing
-                                          ? _shakeAnimation.value * 0.01
-                                          : 0,
-                                  child: child,
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color.fromRGBO(247, 247, 249, 1),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                alignment: Alignment.topLeft,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Positioned.fill(
-                                      child: Align(
-                                        alignment: Alignment.topLeft,
-                                        child:
-                                            isEditing
-                                                ? Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        right: 36.0,
-                                                      ),
-                                                  child: IntrinsicWidth(
-                                                    child: TextFormField(
-                                                      initialValue: card.name,
-                                                      onChanged: (value) async {
-                                                        final updatedCard = card
-                                                            .copyWith(
-                                                              name: value,
-                                                            );
-                                                        setState(() {
-                                                          registerCards[index] =
-                                                              updatedCard;
-                                                        });
-                                                        try {
-                                                          await _registerCardRepo
-                                                              .updateRegisterCard(
-                                                                updatedCard,
-                                                              );
-                                                        } catch (e) {
-                                                          print(
-                                                            'Firestore 수정 실패: $e',
-                                                          );
-                                                        }
-                                                      },
-                                                      decoration: const InputDecoration(
-                                                        isDense: true,
-                                                        isCollapsed: true,
-                                                        enabledBorder:
-                                                            UnderlineInputBorder(
-                                                              borderSide:
-                                                                  BorderSide(
-                                                                    color:
-                                                                        Colors
-                                                                            .black38,
-                                                                    width: 1.5,
+                      child: Padding(
+                        padding: const EdgeInsets.all(0),
+                        child: PageView(
+                          controller: pageController,
+                          physics: NeverScrollableScrollPhysics(),
+                          children: [
+                            // 첫 번째 페이지: 등록카드 그리드
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.all(0),
+                              child: GridView.count(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 1.25,
+                                children: [
+                                  ...registerCards.asMap().entries.map((entry) {
+                                    int index = entry.key;
+                                    RegisterCardModel card = entry.value;
+                                    return AnimatedBuilder(
+                                      animation: _shakeAnimation,
+                                      builder: (context, child) {
+                                        return Transform.rotate(
+                                          angle:
+                                              isEditing
+                                                  ? _shakeAnimation.value * 0.01
+                                                  : 0,
+                                          child: child,
+                                        );
+                                      },
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            selectedCard = registerCards[index];
+                                            currentPageIndex = 1;
+                                          });
+                                          pageController.animateToPage(
+                                            1,
+                                            duration: Duration(
+                                              milliseconds: 300,
+                                            ),
+                                            curve: Curves.easeInOut,
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Color.fromRGBO(
+                                              247,
+                                              247,
+                                              249,
+                                              1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                          alignment: Alignment.topLeft,
+                                          child: Stack(
+                                            clipBehavior: Clip.none,
+                                            children: [
+                                              Positioned.fill(
+                                                child: Align(
+                                                  alignment: Alignment.topLeft,
+                                                  child:
+                                                      isEditing
+                                                          ? Padding(
+                                                            padding:
+                                                                const EdgeInsets.only(
+                                                                  right: 36.0,
+                                                                ),
+                                                            child: IntrinsicWidth(
+                                                              child: TextFormField(
+                                                                initialValue:
+                                                                    card.name,
+                                                                onChanged: (
+                                                                  value,
+                                                                ) {
+                                                                  setState(() {
+                                                                    registerCards[index] = RegisterCardModel(
+                                                                      id: card.id,
+                                                                      name:
+                                                                          value,
+                                                                      totalAmount:
+                                                                          card.totalAmount,
+                                                                      expenses:
+                                                                          card.expenses,
+                                                                    );
+                                                                  });
+                                                                },
+                                                                decoration: const InputDecoration(
+                                                                  isDense: true,
+                                                                  isCollapsed:
+                                                                      true,
+                                                                  enabledBorder: UnderlineInputBorder(
+                                                                    borderSide: BorderSide(
+                                                                      color:
+                                                                          Colors
+                                                                              .black38,
+                                                                      width:
+                                                                          1.5,
+                                                                    ),
                                                                   ),
-                                                            ),
-                                                        focusedBorder:
-                                                            UnderlineInputBorder(
-                                                              borderSide:
-                                                                  BorderSide(
-                                                                    color:
-                                                                        Colors
-                                                                            .black87,
-                                                                    width: 2,
+                                                                  focusedBorder: UnderlineInputBorder(
+                                                                    borderSide:
+                                                                        BorderSide(
+                                                                          color:
+                                                                              Colors.black87,
+                                                                          width:
+                                                                              2,
+                                                                        ),
                                                                   ),
+                                                                  contentPadding:
+                                                                      EdgeInsets.only(
+                                                                        bottom:
+                                                                            4,
+                                                                      ),
+                                                                ),
+                                                                style: const TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                              ),
                                                             ),
-                                                        contentPadding:
-                                                            EdgeInsets.only(
-                                                              bottom: 4,
+                                                          )
+                                                          : Text(
+                                                            card.name,
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                          ),
+                                                ),
+                                              ),
+                                              if (isEditing)
+                                                Positioned(
+                                                  top: -20,
+                                                  right: -20,
+                                                  child: GestureDetector(
+                                                    onTap: () {
+                                                      setState(() {
+                                                        registerCards.removeAt(
+                                                          index,
+                                                        );
+                                                      });
+                                                    },
+                                                    child: Container(
+                                                      width: 28,
+                                                      height: 28,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.grey[300],
+                                                        shape: BoxShape.circle,
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color:
+                                                                Colors.black12,
+                                                            blurRadius: 4,
+                                                            offset: Offset(
+                                                              0,
+                                                              2,
                                                             ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                      style: const TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.bold,
+                                                      child: const Icon(
+                                                        Icons.close,
+                                                        size: 16,
+                                                        color: Colors.black54,
                                                       ),
                                                     ),
                                                   ),
-                                                )
-                                                : Text(
-                                                  card.name,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
                                                 ),
-                                      ),
-                                    ),
-                                    if (isEditing)
-                                      Positioned(
-                                        top: -20,
-                                        right: -20,
-                                        child: GestureDetector(
-                                          onTap: () async {
-                                            final deletedId = card.id;
-                                            setState(() {
-                                              registerCards.removeAt(index);
-                                            });
-                                            try {
-                                              await _registerCardRepo
-                                                  .deleteRegisterCard(
-                                                    deletedId,
-                                                  );
-                                            } catch (e) {
-                                              print('Firestore 삭제 실패: $e');
-                                            }
-                                          },
-                                          child: Container(
-                                            width: 28,
-                                            height: 28,
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey[300],
-                                              shape: BoxShape.circle,
-                                              boxShadow: const [
-                                                BoxShadow(
-                                                  color: Colors.black12,
-                                                  blurRadius: 4,
-                                                  offset: Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            child: const Icon(
-                                              Icons.close,
-                                              size: 16,
-                                              color: Colors.black54,
-                                            ),
+                                            ],
                                           ),
                                         ),
                                       ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          GestureDetector(
-                            onTap: _showAddCategoryDialog,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color.fromRGBO(247, 247, 249, 1),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.add,
-                                  size: 48,
-                                  color: Colors.grey,
-                                ),
+                                    );
+                                  }).toList(),
+                                  GestureDetector(
+                                    onTap: _showAddCategoryDialog,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Color.fromRGBO(247, 247, 249, 1),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.add,
+                                          size: 48,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        ],
+                            // 두 번째 페이지: 선택된 카드 상세 UI (예: 지출 추가 폼)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.all(0),
+                              child: Stack(
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Top bar with back button and title
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(Icons.arrow_back),
+                                            onPressed: () {
+                                              pageController.animateToPage(
+                                                0,
+                                                duration: Duration(
+                                                  milliseconds: 300,
+                                                ),
+                                                curve: Curves.easeInOut,
+                                              );
+                                              setState(() {
+                                                currentPageIndex = 0;
+                                                selectedCard = null;
+                                              });
+                                            },
+                                          ),
+                                          Expanded(
+                                            child: Center(
+                                              child: Text(
+                                                selectedCard?.name ??
+                                                    '선택된 카드 없음',
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            width: 48,
+                                          ), // Placeholder for symmetry with IconButton
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      if (selectedCard != null)
+                                        ...selectedCard!.expenses.map((
+                                          expense,
+                                        ) {
+                                          return ListTile(
+                                            title: Text(expense['name']),
+                                            trailing: Text(
+                                              '${expense['price']}원',
+                                            ),
+                                          );
+                                        }).toList(),
+                                    ],
+                                  ),
+                                  // Floating + button
+                                  Positioned(
+                                    bottom: 16,
+                                    right: 16,
+                                    child: FloatingActionButton(
+                                      onPressed: () {
+                                        // TODO: 지출 추가 로직 작성
+                                      },
+                                      child: Icon(Icons.add),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
