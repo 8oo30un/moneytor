@@ -4,8 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'utils/spending_calculator.dart';
 import 'utils/progress_bar.dart';
-import 'data/register_card_repository.dart';
+
 import 'model/register_card_model.dart';
+import 'data/register_card_repository.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -34,13 +35,62 @@ class _HomePageState extends State<HomePage>
   SortType selectedSort = SortType.price;
   bool isAscending = false;
 
-  // 카테고리 목록
-  List<String> categories = [];
+  late final RegisterCardRepository _registerCardRepo;
 
-  final RegisterCardRepository _registerCardRepo = RegisterCardRepository();
+  // List<String> categories => List<RegisterCardModel> registerCards 로 변경
+  List<RegisterCardModel> registerCards = [];
 
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      userName = user.displayName ?? '';
+      photoUrl = user.photoURL;
+      _registerCardRepo = RegisterCardRepository(userId: user.uid);
+    } else {
+      // Provide a fallback or throw if user is null
+      _registerCardRepo = RegisterCardRepository(userId: 'unknown');
+    }
+
+    monthlyGoal = 1000000;
+    todaySpending = 130000;
+
+    final status = calculateSpendingStatus(
+      monthlyGoal: monthlyGoal,
+      todaySpending: todaySpending,
+    );
+    spendingStatus = status.status;
+    statusColor = status.color;
+
+    _shakeController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _shakeAnimation = Tween<double>(begin: 0.0, end: 2.0).animate(
+      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
+    );
+    _shakeController.stop();
+
+    _loadRegisterCards();
+  }
+
+  Future<void> _loadRegisterCards() async {
+    try {
+      final cards = await _registerCardRepo.fetchRegisterCards();
+      setState(() {
+        registerCards = cards;
+      });
+      print('Firestore 등록카드 로드 완료, 개수: ${cards.length}');
+    } catch (e) {
+      print('Firestore 등록카드 로드 실패: $e');
+    }
+  }
+
   void _showAddCategoryDialog() {
     String newCategory = '';
     showDialog(
@@ -63,18 +113,15 @@ class _HomePageState extends State<HomePage>
             ElevatedButton(
               onPressed: () async {
                 if (newCategory.trim().isNotEmpty) {
-                  final newCard = RegisterCardModel(
-                    id: '', // Firestore가 자동 생성
-                    name: newCategory.trim(),
-                    totalAmount: 0,
-                    expenses: [],
-                  );
                   try {
+                    final newCard = RegisterCardModel(
+                      id: '', // Firestore 자동 생성
+                      name: newCategory.trim(),
+                      totalAmount: 0,
+                      expenses: [],
+                    );
                     await _registerCardRepo.addRegisterCard(newCard);
-                    print('Firestore 저장 성공: ${newCard.name}');
-                    setState(() {
-                      categories.add(newCategory.trim());
-                    });
+                    await _loadRegisterCards();
                   } catch (e) {
                     print('Firestore 저장 실패: $e');
                   }
@@ -116,54 +163,6 @@ class _HomePageState extends State<HomePage>
         isAscending = false;
       }
     });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRegisterCards();
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      setState(() {
-        userName = user.displayName ?? '';
-        photoUrl = user.photoURL;
-      });
-    }
-    // 기존 monthlyGoal 등 초기화 코드 유지
-    monthlyGoal = 1000000;
-    todaySpending = 130000;
-
-    final status = calculateSpendingStatus(
-      monthlyGoal: monthlyGoal,
-      todaySpending: todaySpending,
-    );
-
-    spendingStatus = status.status;
-    statusColor = status.color;
-
-    _shakeController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _shakeAnimation = Tween<double>(begin: 0.0, end: 2.0).animate(
-      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
-    );
-    _shakeController.stop();
-
-    _loadRegisterCards(); // 새로 추가
-  }
-
-  Future<void> _loadRegisterCards() async {
-    try {
-      final cards = await _registerCardRepo.fetchRegisterCards();
-      print('Firestore 로드 성공: ${cards.length}개 카드');
-      setState(() {
-        categories = cards.map((card) => card.name).toList();
-      });
-    } catch (e) {
-      print('Firestore 로드 실패: $e');
-    }
   }
 
   @override
@@ -305,7 +304,12 @@ class _HomePageState extends State<HomePage>
                           onPressed: togglePriceSort,
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(80, 36),
-                            backgroundColor: Color.fromRGBO(247, 247, 249, 1),
+                            backgroundColor: const Color.fromRGBO(
+                              247,
+                              247,
+                              249,
+                              1,
+                            ),
                             foregroundColor:
                                 selectedSort == SortType.price
                                     ? Colors.black
@@ -315,7 +319,7 @@ class _HomePageState extends State<HomePage>
                             ),
                             elevation: 0,
                             side: BorderSide.none,
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: 0,
                               vertical: 8,
                             ),
@@ -345,7 +349,12 @@ class _HomePageState extends State<HomePage>
                           onPressed: toggleDateSort,
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(80, 36),
-                            backgroundColor: Color.fromRGBO(247, 247, 249, 1),
+                            backgroundColor: const Color.fromRGBO(
+                              247,
+                              247,
+                              249,
+                              1,
+                            ),
                             foregroundColor:
                                 selectedSort == SortType.date
                                     ? Colors.black
@@ -355,7 +364,7 @@ class _HomePageState extends State<HomePage>
                             ),
                             elevation: 0,
                             side: BorderSide.none,
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: 0,
                               vertical: 8,
                             ),
@@ -394,14 +403,19 @@ class _HomePageState extends State<HomePage>
                           },
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(60, 36),
-                            backgroundColor: Color.fromRGBO(247, 247, 249, 1),
+                            backgroundColor: const Color.fromRGBO(
+                              247,
+                              247,
+                              249,
+                              1,
+                            ),
                             foregroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 0,
                             side: BorderSide.none,
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: 20,
                               vertical: 8,
                             ),
@@ -416,12 +430,11 @@ class _HomePageState extends State<HomePage>
                         crossAxisCount: 2,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
-                        childAspectRatio: 1.25, // 가로:세로 비율 2:1
+                        childAspectRatio: 1.25,
                         children: [
-                          ...categories.asMap().entries.map((entry) {
-                            int index = entry.key;
-                            String category = entry.value;
-
+                          ...registerCards.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final card = entry.value;
                             return AnimatedBuilder(
                               animation: _shakeAnimation,
                               builder: (context, child) {
@@ -436,7 +449,7 @@ class _HomePageState extends State<HomePage>
                               child: Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Color.fromRGBO(247, 247, 249, 1),
+                                  color: const Color.fromRGBO(247, 247, 249, 1),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 alignment: Alignment.topLeft,
@@ -455,12 +468,26 @@ class _HomePageState extends State<HomePage>
                                                       ),
                                                   child: IntrinsicWidth(
                                                     child: TextFormField(
-                                                      initialValue: category,
-                                                      onChanged: (value) {
+                                                      initialValue: card.name,
+                                                      onChanged: (value) async {
+                                                        final updatedCard = card
+                                                            .copyWith(
+                                                              name: value,
+                                                            );
                                                         setState(() {
-                                                          categories[index] =
-                                                              value;
+                                                          registerCards[index] =
+                                                              updatedCard;
                                                         });
+                                                        try {
+                                                          await _registerCardRepo
+                                                              .updateRegisterCard(
+                                                                updatedCard,
+                                                              );
+                                                        } catch (e) {
+                                                          print(
+                                                            'Firestore 수정 실패: $e',
+                                                          );
+                                                        }
                                                       },
                                                       decoration: const InputDecoration(
                                                         isDense: true,
@@ -499,7 +526,7 @@ class _HomePageState extends State<HomePage>
                                                   ),
                                                 )
                                                 : Text(
-                                                  category,
+                                                  card.name,
                                                   style: const TextStyle(
                                                     fontSize: 16,
                                                     fontWeight: FontWeight.bold,
@@ -512,10 +539,19 @@ class _HomePageState extends State<HomePage>
                                         top: -20,
                                         right: -20,
                                         child: GestureDetector(
-                                          onTap: () {
+                                          onTap: () async {
+                                            final deletedId = card.id;
                                             setState(() {
-                                              categories.removeAt(index);
+                                              registerCards.removeAt(index);
                                             });
+                                            try {
+                                              await _registerCardRepo
+                                                  .deleteRegisterCard(
+                                                    deletedId,
+                                                  );
+                                            } catch (e) {
+                                              print('Firestore 삭제 실패: $e');
+                                            }
                                           },
                                           child: Container(
                                             width: 28,
@@ -523,7 +559,7 @@ class _HomePageState extends State<HomePage>
                                             decoration: BoxDecoration(
                                               color: Colors.grey[300],
                                               shape: BoxShape.circle,
-                                              boxShadow: [
+                                              boxShadow: const [
                                                 BoxShadow(
                                                   color: Colors.black12,
                                                   blurRadius: 4,
@@ -548,7 +584,7 @@ class _HomePageState extends State<HomePage>
                             onTap: _showAddCategoryDialog,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Color.fromRGBO(247, 247, 249, 1),
+                                color: const Color.fromRGBO(247, 247, 249, 1),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: const Center(

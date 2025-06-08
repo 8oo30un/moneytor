@@ -1,3 +1,4 @@
+// lib/data/register_card_model.dart
 class RegisterCardModel {
   final String id;
   final String name;
@@ -25,5 +26,19 @@ class RegisterCardModel {
 
   Map<String, dynamic> toFirestore() {
     return {'name': name, 'totalAmount': totalAmount, 'expenses': expenses};
+  }
+
+  RegisterCardModel copyWith({
+    String? id,
+    String? name,
+    int? totalAmount,
+    List<Map<String, dynamic>>? expenses,
+  }) {
+    return RegisterCardModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      totalAmount: totalAmount ?? this.totalAmount,
+      expenses: expenses ?? this.expenses,
+    );
   }
 }
