@@ -47,6 +47,8 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
+    registerCards.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       userName = user.displayName ?? '';
@@ -84,6 +86,7 @@ class _HomePageState extends State<HomePage>
       final cards = await _registerCardRepo.fetchRegisterCards();
       setState(() {
         registerCards = cards;
+        registerCards.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
       });
       print('Firestore 등록카드 로드 완료, 개수: ${cards.length}');
     } catch (e) {
@@ -651,6 +654,11 @@ class _HomePageState extends State<HomePage>
                                           setState(() {
                                             currentPageIndex = 0;
                                             selectedCard = null;
+                                            registerCards.sort(
+                                              (a, b) => b.totalAmount.compareTo(
+                                                a.totalAmount,
+                                              ),
+                                            );
                                           });
                                           _calculateStatus();
                                         },
