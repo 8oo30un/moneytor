@@ -700,11 +700,141 @@ class _HomePageState extends State<HomePage>
                                   Positioned(
                                     bottom: 16,
                                     right: 16,
-                                    child: FloatingActionButton(
-                                      onPressed: () {
-                                        // TODO: 지출 추가 로직 작성
-                                      },
-                                      child: Icon(Icons.add),
+                                    child: SizedBox(
+                                      width: 40, // 원하는 너비
+                                      height: 40, // 원하는 높이
+                                      child: FloatingActionButton(
+                                        onPressed: () {
+                                          String expenseName = '';
+                                          String expensePrice = '';
+
+                                          showDialog(
+                                            context: context,
+                                            builder: (BuildContext context) {
+                                              return AlertDialog(
+                                                title: const Text('지출 추가'),
+                                                content: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    TextField(
+                                                      decoration:
+                                                          const InputDecoration(
+                                                            labelText:
+                                                                '지출 항목 이름',
+                                                          ),
+                                                      onChanged: (value) {
+                                                        expenseName = value;
+                                                      },
+                                                    ),
+                                                    TextField(
+                                                      decoration:
+                                                          const InputDecoration(
+                                                            labelText: '금액',
+                                                          ),
+                                                      keyboardType:
+                                                          TextInputType.number,
+                                                      onChanged: (value) {
+                                                        expensePrice = value;
+                                                      },
+                                                    ),
+                                                  ],
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed:
+                                                        () =>
+                                                            Navigator.of(
+                                                              context,
+                                                            ).pop(),
+                                                    child: const Text('취소'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () async {
+                                                      if (expenseName
+                                                              .trim()
+                                                              .isNotEmpty &&
+                                                          int.tryParse(
+                                                                expensePrice,
+                                                              ) !=
+                                                              null &&
+                                                          selectedCard !=
+                                                              null) {
+                                                        final newExpense = {
+                                                          'name':
+                                                              expenseName
+                                                                  .trim(),
+                                                          'price': int.parse(
+                                                            expensePrice,
+                                                          ),
+                                                        };
+
+                                                        final updatedExpenses =
+                                                            List<
+                                                              Map<
+                                                                String,
+                                                                dynamic
+                                                              >
+                                                            >.from(
+                                                              selectedCard!
+                                                                  .expenses,
+                                                            )..add(newExpense);
+
+                                                        final updatedTotal =
+                                                            updatedExpenses.fold<
+                                                              int
+                                                            >(
+                                                              0,
+                                                              (sum, item) =>
+                                                                  sum +
+                                                                  (item['price']
+                                                                      as int),
+                                                            );
+
+                                                        final updatedCard =
+                                                            RegisterCardModel(
+                                                              id:
+                                                                  selectedCard!
+                                                                      .id,
+                                                              name:
+                                                                  selectedCard!
+                                                                      .name,
+                                                              expenses:
+                                                                  updatedExpenses,
+                                                              totalAmount:
+                                                                  updatedTotal,
+                                                            );
+
+                                                        await _registerCardRepo
+                                                            .updateRegisterCard(
+                                                              updatedCard,
+                                                            );
+
+                                                        setState(() {
+                                                          selectedCard =
+                                                              updatedCard;
+                                                        });
+
+                                                        Navigator.of(
+                                                          context,
+                                                        ).pop();
+                                                      }
+                                                    },
+                                                    child: const Text('추가'),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          );
+                                        },
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: Colors.black, // 아이콘 색상
+                                        elevation: 0, // 쉐도우 제거
+                                        child: Icon(
+                                          Icons.add,
+                                          size: 20, // 아이콘도 버튼 크기에 맞게 조정
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
