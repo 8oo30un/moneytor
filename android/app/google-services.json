@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "78758121359",
+    "project_id": "moneytor-e0622",
+    "storage_bucket": "moneytor-e0622.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:78758121359:android:2de8a3f7ad7c31d71fc5fa",
+        "android_client_info": {
+          "package_name": "com.example.moneytor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "78758121359-0jafq8iv0mvnbbp40gv80jphb4vfkka0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFoRAAuscMn8ewMgDNOhZFLZ_7paK0dvE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "78758121359-0jafq8iv0mvnbbp40gv80jphb4vfkka0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "78758121359-1ffu972pugh765dqipqe0vg1nqi4o6dp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.moneytor"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

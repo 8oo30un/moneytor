@@ -1,3 +1,4 @@
+// lib/login.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -77,7 +78,9 @@ class _LoginPageState extends State<LoginPage> {
                           showDialog(
                             context: context,
                             builder: (context) {
-                              final _formKey = GlobalKey<FormState>();
+                              final formKey = GlobalKey<FormState>();
+                              final TextEditingController nameController =
+                                  TextEditingController();
                               final TextEditingController idController =
                                   TextEditingController();
                               final TextEditingController passwordController =
@@ -89,14 +92,28 @@ class _LoginPageState extends State<LoginPage> {
                                 title: const Text('회원가입'),
                                 content: SingleChildScrollView(
                                   child: Form(
-                                    key: _formKey,
+                                    key: formKey,
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         TextFormField(
+                                          controller: nameController,
+                                          decoration: const InputDecoration(
+                                            labelText: '이름',
+                                          ),
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return '이름을 입력해주세요';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextFormField(
                                           controller: idController,
                                           decoration: const InputDecoration(
-                                            labelText: '아이디',
+                                            labelText: '아이디 (이메일)',
                                           ),
                                           validator: (value) {
                                             if (value == null ||
@@ -112,6 +129,7 @@ class _LoginPageState extends State<LoginPage> {
                                             return null;
                                           },
                                         ),
+                                        const SizedBox(height: 8),
                                         TextFormField(
                                           controller: passwordController,
                                           decoration: const InputDecoration(
@@ -132,6 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                                             return null;
                                           },
                                         ),
+                                        const SizedBox(height: 8),
                                         TextFormField(
                                           controller: confirmController,
                                           decoration: const InputDecoration(
@@ -157,7 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                                 actions: [
                                   TextButton(
                                     onPressed: () {
-                                      if (_formKey.currentState!.validate()) {
+                                      if (formKey.currentState!.validate()) {
                                         FirebaseAuth.instance
                                             .createUserWithEmailAndPassword(
                                               email: idController.text.trim(),
@@ -409,41 +428,66 @@ class _LoginFieldsState extends State<_LoginFields> {
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextFormField(
-            controller: idController,
-            decoration: const InputDecoration(labelText: '아이디'),
-          ),
-          TextFormField(
-            controller: passwordController,
-            decoration: const InputDecoration(labelText: '비밀번호'),
-            obscureText: true,
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _login,
-            child: const Text('로그인'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF91D8F7),
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 73, vertical: 1),
-              textStyle: const TextStyle(fontSize: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+    return Padding(
+      padding: const EdgeInsets.only(top: 0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 48,
+              child: TextFormField(
+                controller: idController,
+                decoration: const InputDecoration(
+                  labelText: '아이디(이메일)',
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: 8.0,
+                    horizontal: 12.0,
+                  ),
+                ),
               ),
-              shadowColor: Colors.grey.withOpacity(0.1),
             ),
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: widget.onBackPressed,
-            child: const Text('뒤로가기'),
-          ),
-        ],
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 48,
+              child: TextFormField(
+                controller: passwordController,
+                decoration: const InputDecoration(
+                  labelText: '비밀번호',
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: 8.0,
+                    horizontal: 12.0,
+                  ),
+                ),
+                obscureText: true,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _login,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF91D8F7),
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 60,
+                  vertical: 1,
+                ),
+                textStyle: const TextStyle(fontSize: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                shadowColor: Colors.grey.withOpacity(0.1),
+              ),
+              child: const Text('로그인'),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: widget.onBackPressed,
+              child: const Text('뒤로가기'),
+            ),
+          ],
+        ),
       ),
     );
   }

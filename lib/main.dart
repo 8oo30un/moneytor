@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:moneytor/home.dart';
 import 'login.dart';
+import 'firebase_options.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,13 +14,13 @@ class InitializationApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: Firebase.initializeApp(),
+      future: Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      ),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const MaterialApp(
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
-          );
-        } else if (snapshot.hasError) {
+        print('Firebase init state: ${snapshot.connectionState}');
+        if (snapshot.hasError) {
+          print('Firebase init error: ${snapshot.error}');
           return MaterialApp(
             home: Scaffold(
               body: Center(
@@ -28,9 +28,14 @@ class InitializationApp extends StatelessWidget {
               ),
             ),
           );
-        } else {
+        }
+        if (snapshot.connectionState == ConnectionState.done) {
+          print('Firebase 초기화 완료');
           return const MyApp();
         }
+        return const MaterialApp(
+          home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        );
       },
     );
   }

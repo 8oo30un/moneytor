@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'utils/spending_calculator.dart';
 import 'utils/progress_bar.dart';
+import 'data/register_card_repository.dart';
+import 'model/register_card_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -35,6 +37,8 @@ class _HomePageState extends State<HomePage>
   // 카테고리 목록
   List<String> categories = [];
 
+  final RegisterCardRepository _registerCardRepo = RegisterCardRepository();
+
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
   void _showAddCategoryDialog() {
@@ -57,11 +61,23 @@ class _HomePageState extends State<HomePage>
               child: const Text('취소'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (newCategory.trim().isNotEmpty) {
-                  setState(() {
-                    categories.add(newCategory.trim());
-                  });
+                  final newCard = RegisterCardModel(
+                    id: '', // Firestore가 자동 생성
+                    name: newCategory.trim(),
+                    totalAmount: 0,
+                    expenses: [],
+                  );
+                  try {
+                    await _registerCardRepo.addRegisterCard(newCard);
+                    print('Firestore 저장 성공: ${newCard.name}');
+                    setState(() {
+                      categories.add(newCategory.trim());
+                    });
+                  } catch (e) {
+                    print('Firestore 저장 실패: $e');
+                  }
                 }
                 Navigator.of(context).pop();
               },
@@ -105,6 +121,7 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
+    _loadRegisterCards();
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       setState(() {
@@ -112,9 +129,9 @@ class _HomePageState extends State<HomePage>
         photoUrl = user.photoURL;
       });
     }
-    // 예시 데이터로 한 달 목표 및 현재 지출 지정
-    monthlyGoal = 1000000; // 1,000,000원 목표
-    todaySpending = 130000; // 현재까지 250,000원 지출
+    // 기존 monthlyGoal 등 초기화 코드 유지
+    monthlyGoal = 1000000;
+    todaySpending = 130000;
 
     final status = calculateSpendingStatus(
       monthlyGoal: monthlyGoal,
@@ -133,6 +150,20 @@ class _HomePageState extends State<HomePage>
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
     );
     _shakeController.stop();
+
+    _loadRegisterCards(); // 새로 추가
+  }
+
+  Future<void> _loadRegisterCards() async {
+    try {
+      final cards = await _registerCardRepo.fetchRegisterCards();
+      print('Firestore 로드 성공: ${cards.length}개 카드');
+      setState(() {
+        categories = cards.map((card) => card.name).toList();
+      });
+    } catch (e) {
+      print('Firestore 로드 실패: $e');
+    }
   }
 
   @override
