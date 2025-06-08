@@ -4,9 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'utils/spending_calculator.dart';
 import 'utils/progress_bar.dart';
-
+import 'widgets/card_spending_summary.dart';
+import 'widgets/spending_status_display.dart';
 import 'model/register_card_model.dart';
 import 'data/register_card_repository.dart';
+import 'utils/status_utils.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,17 +25,13 @@ class _HomePageState extends State<HomePage>
   PageController pageController = PageController();
   RegisterCardModel? selectedCard;
   int _selectedIndex = 2;
-
   bool isEditing = false;
-
   String userName = '';
   String? photoUrl;
-
+  int monthlyGoal = 1000000;
+  int todaySpending = 20000000;
   String spendingStatus = '절약'; // 절약, 평균, 과소비 중 하나
   Color statusColor = Colors.green; // 절약: 초록, 평균: 파랑, 과소비: 빨강
-
-  int monthlyGoal = 0;
-  int todaySpending = 0;
 
   SortType selectedSort = SortType.price;
   bool isAscending = false;
@@ -58,8 +56,7 @@ class _HomePageState extends State<HomePage>
       _registerCardRepo = RegisterCardRepository(userId: '');
     }
 
-    monthlyGoal = 1000000;
-    todaySpending = 500000;
+    String? selectedCardName = selectedCard?.name;
 
     final status = calculateSpendingStatus(
       monthlyGoal: monthlyGoal,
@@ -79,6 +76,7 @@ class _HomePageState extends State<HomePage>
     _shakeController.stop();
 
     _loadRegisterCards();
+    _calculateStatus();
   }
 
   Future<void> _loadRegisterCards() async {
@@ -91,6 +89,13 @@ class _HomePageState extends State<HomePage>
     } catch (e) {
       print('Firestore 등록카드 로드 실패: $e');
     }
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+      // Add navigation logic here if needed
+    });
   }
 
   void _showAddCategoryDialog() {
@@ -138,11 +143,19 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  void _onItemTapped(int index) {
+  void _calculateStatus() {
+    final result = calculateStatusFromCard(selectedCard: selectedCard);
+
     setState(() {
-      _selectedIndex = index;
+      monthlyGoal = result.goal;
+      todaySpending = result.spending;
+      spendingStatus = result.status;
+      statusColor = result.color;
     });
-    // TODO: 페이지 전환 로직 추가 가능
+
+    print(
+      '상태 계산됨 ➜ goal: ${result.goal}, spending: ${result.spending}, status: ${result.status}',
+    );
   }
 
   void togglePriceSort() {
@@ -153,6 +166,13 @@ class _HomePageState extends State<HomePage>
         selectedSort = SortType.price;
         isAscending = false;
       }
+      // Optionally, sort the registerCards list here if needed
+      registerCards.sort(
+        (a, b) =>
+            isAscending
+                ? a.totalAmount.compareTo(b.totalAmount)
+                : b.totalAmount.compareTo(a.totalAmount),
+      );
     });
   }
 
@@ -164,13 +184,22 @@ class _HomePageState extends State<HomePage>
         selectedSort = SortType.date;
         isAscending = false;
       }
+      // Sort by the latest expense date if available, otherwise leave as is
+      registerCards.sort((a, b) {
+        DateTime? aDate =
+            a.expenses.isNotEmpty && a.expenses.last['date'] != null
+                ? DateTime.tryParse(a.expenses.last['date'].toString())
+                : null;
+        DateTime? bDate =
+            b.expenses.isNotEmpty && b.expenses.last['date'] != null
+                ? DateTime.tryParse(b.expenses.last['date'].toString())
+                : null;
+        if (aDate == null && bDate == null) return 0;
+        if (aDate == null) return isAscending ? 1 : -1;
+        if (bDate == null) return isAscending ? -1 : 1;
+        return isAscending ? aDate.compareTo(bDate) : bDate.compareTo(aDate);
+      });
     });
-  }
-
-  @override
-  void dispose() {
-    _shakeController.dispose();
-    super.dispose();
   }
 
   @override
@@ -201,92 +230,28 @@ class _HomePageState extends State<HomePage>
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 12.0,
-            ),
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(fontSize: 20.0, color: Colors.black),
-                children: [
-                  TextSpan(text: '$userName님,\n'),
-                  if (spendingStatus == '평균') ...[
-                    const TextSpan(text: '권장지출만큼 '),
-                    TextSpan(
-                      text: '적절히',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: statusColor,
-                      ),
-                    ),
-                    const TextSpan(text: ' 소비하고 있어요!'),
-                  ] else ...[
-                    const TextSpan(text: '권장지출보다 '),
-                    TextSpan(
-                      text: spendingStatus,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: statusColor,
-                      ),
-                    ),
-                    const TextSpan(text: '하고 있어요!'),
-                  ],
-                ],
-              ),
-            ),
+          SpendingStatusDisplay(
+            userName: userName,
+            monthlyGoal: monthlyGoal,
+            todaySpending: todaySpending,
+            selectedCard: selectedCard, // 선택된 카드가 있을 경우 전달
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    DateFormat('yyyy년 M월 지출').format(DateTime.now()),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const SizedBox(width: 4),
-                      BentoLabelBox(label: '월간 지출'),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: LabeledProgressBox(
-                          progress: todaySpending / monthlyGoal,
-                          color: statusColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const SizedBox(width: 4),
-                      BentoLabelBox(label: '권장 지출'),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: LabeledProgressBox(
-                          progress:
-                              ((monthlyGoal / 30) * DateTime.now().day) /
-                              monthlyGoal,
-                          color: statusColor.withOpacity(0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          //TODO: 그래프 카드 완료
+          CardSpendingSummary(
+            selectedCard: selectedCard,
+            todaySpending: todaySpending,
+            monthlyGoal: monthlyGoal,
+            statusColor: statusColor,
+            userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+            onGoalSaved: (updatedCard) {
+              setState(() {
+                selectedCard = updatedCard;
+                int idx = registerCards.indexWhere(
+                  (c) => c.id == updatedCard.id,
+                );
+                if (idx != -1) registerCards[idx] = updatedCard;
+              });
+            },
           ),
           Expanded(
             child: Padding(
@@ -467,6 +432,8 @@ class _HomePageState extends State<HomePage>
                                             selectedCard = registerCards[index];
                                             currentPageIndex = 1;
                                           });
+                                          _calculateStatus();
+
                                           pageController.animateToPage(
                                             1,
                                             duration: Duration(
@@ -478,12 +445,14 @@ class _HomePageState extends State<HomePage>
                                         child: Container(
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: Color.fromRGBO(
-                                              247,
-                                              247,
-                                              249,
-                                              1,
-                                            ),
+                                            color:
+                                                calculateSpendingStatus(
+                                                  monthlyGoal:
+                                                      card.spendingGoal ??
+                                                      monthlyGoal,
+                                                  todaySpending:
+                                                      card.totalAmount,
+                                                ).color,
                                             borderRadius: BorderRadius.circular(
                                               16,
                                             ),
@@ -683,6 +652,7 @@ class _HomePageState extends State<HomePage>
                                             currentPageIndex = 0;
                                             selectedCard = null;
                                           });
+                                          _calculateStatus();
                                         },
                                       ),
                                       Expanded(
@@ -848,6 +818,9 @@ class _HomePageState extends State<HomePage>
                                                                       updatedExpenses,
                                                                   totalAmount:
                                                                       updatedTotal,
+                                                                  spendingGoal:
+                                                                      selectedCard!
+                                                                          .spendingGoal,
                                                                 );
 
                                                                 try {
