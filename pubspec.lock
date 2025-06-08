@@ -192,23 +192,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  google_identity_services_web:
-    dependency: transitive
-    description:
-      name: google_identity_services_web
-      sha256: "000b7a31e1fa17ee04b6c0553a2b2ea18f9f9352e4dcc0c9fcc785cf10f2484e"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.2"
   google_sign_in:
     dependency: "direct main"
     description:
-      path: "packages/google_sign_in/google_sign_in"
-      ref: HEAD
-      resolved-ref: "557d3284ac9dda32a1106bb75be8a23bdccd2f96"
-      url: "https://github.com/flutter/plugins.git"
-    source: git
-    version: "6.0.0"
+      name: google_sign_in
+      sha256: "821f354c053d51a2d417b02d42532a19a6ea8057d2f9ebb8863c07d81c98aaf9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.4.4"
   google_sign_in_android:
     dependency: transitive
     description:
@@ -220,12 +211,11 @@ packages:
   google_sign_in_ios:
     dependency: "direct overridden"
     description:
-      path: "packages/google_sign_in/google_sign_in_ios"
-      ref: HEAD
-      resolved-ref: "557d3284ac9dda32a1106bb75be8a23bdccd2f96"
-      url: "https://github.com/flutter/plugins.git"
-    source: git
-    version: "5.5.1"
+      name: google_sign_in_ios
+      sha256: "6ec0e13a4c5c646471b9f6a25ceb3ae76d339889d4c0f79b729bf0714215a63e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.6.2"
   google_sign_in_platform_interface:
     dependency: transitive
     description:
@@ -238,18 +228,10 @@ packages:
     dependency: transitive
     description:
       name: google_sign_in_web
-      sha256: "9f883b9b525297663510dfbbe8b04d39715aa0abba430851f501b7d1e4b0f465"
+      sha256: "75cc41ebc53b1756320ee14d9c3018ad3e6cea298147dbcd86e9d0c8d6720b40"
       url: "https://pub.dev"
     source: hosted
-    version: "0.11.0+2"
-  http:
-    dependency: transitive
-    description:
-      name: http
-      sha256: "5895291c13fa8a3bd82e76d5627f69e0d85ca6a30dcac95c4ea19a5d555879c2"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.13.6"
+    version: "0.10.2+1"
   http_parser:
     dependency: transitive
     description:

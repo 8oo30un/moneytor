@@ -32,10 +32,7 @@ dependencies:
     sdk: flutter
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.0
-  google_sign_in:
-    git:
-      url: https://github.com/flutter/plugins.git
-      path: packages/google_sign_in/google_sign_in
+  google_sign_in: ^5.4.4
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
@@ -43,6 +40,9 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1 # 최신 버전 확인 필요
   flutter_lints: ^5.0.0
+
+dependency_overrides:
+  google_sign_in_ios: 5.6.2
 
 flutter_launcher_icons:
   android: true
@@ -60,9 +60,3 @@ flutter:
     - assets/googleIcon.png
     - assets/userIcon.png
   uses-material-design: true
-
-dependency_overrides:
-  google_sign_in_ios:
-    git:
-      url: https://github.com/flutter/plugins.git
-      path: packages/google_sign_in/google_sign_in_ios

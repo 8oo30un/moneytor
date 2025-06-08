@@ -63,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const Text(
                   '당신의 돈을 스마트하고, 모니터링 하는 앱',
-                  style: TextStyle(fontSize: 18),
+                  style: TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 102),
                 SizedBox(
@@ -252,7 +252,7 @@ class _LoginButtons extends StatelessWidget {
             children: [
               Image.asset('assets/userIcon.png', width: 28, height: 28),
               const SizedBox(width: 15),
-              const Text('회원 로그인'),
+              const Text('회원 로그인', style: TextStyle(fontSize: 14)),
             ],
           ),
         ),
@@ -304,14 +304,14 @@ class _LoginButtons extends StatelessWidget {
             children: [
               Image.asset('assets/googleIcon.png', width: 18, height: 18),
               const SizedBox(width: 11),
-              const Text('  구글 로그인'),
+              const Text('  구글 로그인', style: TextStyle(fontSize: 14)),
             ],
           ),
         ),
         const SizedBox(height: 20),
         ElevatedButton.icon(
           onPressed: onSignupPressed,
-          label: const Text('회원가입'),
+          label: const Text('회원가입', style: TextStyle(fontSize: 14)),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF91D8F7),
             foregroundColor: Colors.black,
