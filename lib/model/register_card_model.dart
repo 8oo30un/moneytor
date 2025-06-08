@@ -19,7 +19,9 @@ class RegisterCardModel {
     return RegisterCardModel(
       id: docId,
       name: data['name'] ?? '',
-      totalAmount: data['totalAmount'] ?? 0,
+      totalAmount: List<Map<String, dynamic>>.from(
+        data['expenses'] ?? [],
+      ).fold<int>(0, (sum, item) => sum + ((item['price'] ?? 0) as int)),
       expenses: List<Map<String, dynamic>>.from(data['expenses'] ?? []),
     );
   }
