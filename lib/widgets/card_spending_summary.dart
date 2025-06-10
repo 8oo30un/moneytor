@@ -14,6 +14,7 @@ class CardSpendingSummary extends StatefulWidget {
   final Color statusColor;
   final String userId;
   final Function(RegisterCardModel updatedCard) onGoalSaved;
+  final List<RegisterCardModel> registerCards;
 
   const CardSpendingSummary({
     super.key,
@@ -23,6 +24,7 @@ class CardSpendingSummary extends StatefulWidget {
     required this.statusColor,
     required this.userId,
     required this.onGoalSaved,
+    required this.registerCards,
   });
 
   @override
@@ -48,6 +50,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
       selectedCard: widget.selectedCard,
       defaultGoal: widget.monthlyGoal,
       defaultSpending: widget.todaySpending,
+      allCards: widget.registerCards,
     );
 
     setState(() {
@@ -62,16 +65,19 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
 
   @override
   Widget build(BuildContext context) {
+    final totalSpending = RegisterCardModel.calculateTotalSpending(
+      widget.registerCards,
+    );
     final card = widget.selectedCard;
 
     if (card == null) {
       return _buildSummaryUI(
         title: DateFormat('yyyy년 M월 지출').format(DateTime.now()),
-        spending: widget.todaySpending,
+        spending: totalSpending,
         goal: widget.monthlyGoal,
         status: calculateSpendingStatus(
           monthlyGoal: widget.monthlyGoal,
-          todaySpending: widget.todaySpending,
+          todaySpending: totalSpending,
         ),
       );
     }
@@ -185,7 +191,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                     Expanded(
                       child: LabeledProgressBox(
                         progress: goal > 0 ? spending / goal : 0,
-                        color: status.color,
+                        color: status.color.withOpacity(0.6),
                       ),
                     ),
                   ],
@@ -202,7 +208,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                             goal > 0
                                 ? ((goal / 30) * DateTime.now().day) / goal
                                 : 0,
-                        color: status.color.withOpacity(0.6),
+                        color: status.color.withOpacity(1),
                       ),
                     ),
                   ],

@@ -27,10 +27,19 @@ SpendingStatus calculateSpendingStatus({
   final double recommendedSpending = dailyGoal * dayPassed;
 
   if (todaySpending > recommendedSpending * 1.1) {
-    return SpendingStatus(status: '과소비', color: Colors.red);
+    return SpendingStatus(
+      status: '과소비',
+      color: Color.fromRGBO(255, 187, 135, 1),
+    );
   } else if (todaySpending < recommendedSpending * 0.9) {
-    return SpendingStatus(status: '절약', color: Colors.green);
+    return SpendingStatus(
+      status: '절약',
+      color: Color.fromRGBO(152, 219, 204, 1),
+    );
   } else {
-    return SpendingStatus(status: '평균', color: Colors.blue);
+    return SpendingStatus(
+      status: '평균',
+      color: Color.fromRGBO(161, 227, 249, 1),
+    );
   }
 }

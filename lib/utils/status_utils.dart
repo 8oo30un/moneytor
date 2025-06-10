@@ -19,7 +19,9 @@ class StatusResult {
 StatusResult calculateStatusFromCard({
   RegisterCardModel? selectedCard,
   int defaultGoal = 1000000,
-  int defaultSpending = 500000,
+  //TODO: 목데이터 수정
+  int? defaultSpending,
+  List<RegisterCardModel>? allCards,
 }) {
   int goal;
   int spending;
@@ -31,7 +33,11 @@ StatusResult calculateStatusFromCard({
     spending = selectedCard.totalAmount;
   } else {
     goal = defaultGoal;
-    spending = defaultSpending;
+    spending =
+        defaultSpending ??
+        (allCards != null
+            ? RegisterCardModel.calculateTotalSpending(allCards)
+            : 0);
   }
 
   final status = calculateSpendingStatus(

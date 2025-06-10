@@ -29,7 +29,7 @@ class _HomePageState extends State<HomePage>
   String userName = '';
   String? photoUrl;
   int monthlyGoal = 1000000;
-  int todaySpending = 20000000;
+  int todaySpending = 20000;
   String spendingStatus = '절약'; // 절약, 평균, 과소비 중 하나
   Color statusColor = Colors.green; // 절약: 초록, 평균: 파랑, 과소비: 빨강
 
@@ -147,7 +147,10 @@ class _HomePageState extends State<HomePage>
   }
 
   void _calculateStatus() {
-    final result = calculateStatusFromCard(selectedCard: selectedCard);
+    final result = calculateStatusFromCard(
+      selectedCard: selectedCard,
+      allCards: registerCards, // ✅ 이걸 꼭 전달해야 함
+    );
 
     setState(() {
       monthlyGoal = result.goal;
@@ -246,6 +249,7 @@ class _HomePageState extends State<HomePage>
             monthlyGoal: monthlyGoal,
             statusColor: statusColor,
             userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+            registerCards: registerCards,
             onGoalSaved: (updatedCard) {
               setState(() {
                 selectedCard = updatedCard;

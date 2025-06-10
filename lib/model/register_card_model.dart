@@ -52,4 +52,8 @@ class RegisterCardModel {
       spendingGoal: spendingGoal ?? this.spendingGoal,
     );
   }
+
+  static int calculateTotalSpending(List<RegisterCardModel> cards) {
+    return cards.fold(0, (sum, card) => sum + card.totalAmount);
+  }
 }
