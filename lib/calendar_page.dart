@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -21,99 +22,193 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Widget _buildMonthItem(DateTime month, {required bool isSelected}) {
-    final monthStr = DateFormat('yyyy.MM').format(month);
+    final monthStr = DateFormat('yyyy년 MM월', 'ko').format(month);
     return GestureDetector(
       onTap: () {
         setState(() {
-          selectedMonth = month;
+          selectedMonth = DateTime(month.year, month.month);
         });
       },
       child: Container(
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 12.0),
-        color: isSelected ? Colors.blue[100] : Colors.transparent,
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 0),
+        decoration:
+            isSelected
+                ? BoxDecoration(
+                  color: Colors.blue[100],
+                  borderRadius: BorderRadius.circular(12),
+                )
+                : BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
         child: Text(
           monthStr,
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.black : const Color(0xFF898989),
           ),
+          textAlign: TextAlign.center,
         ),
       ),
     );
   }
 
-  Widget _buildMonthSelector() {
-    final months = [
-      selectedMonth.subtract(const Duration(days: 30)),
-      selectedMonth,
-      selectedMonth.add(const Duration(days: 30)),
-      selectedMonth.add(const Duration(days: 60)),
-    ];
-
+  Widget _buildUpperMonths(DateTime previousMonth, DateTime selected) {
     return Column(
-      children:
-          months.map((month) {
-            return _buildMonthItem(
-              month,
-              isSelected:
-                  month.year == selectedMonth.year &&
-                  month.month == selectedMonth.month,
-            );
-          }).toList(),
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: _buildMonthItem(previousMonth, isSelected: false),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: _buildMonthItem(selected, isSelected: true),
+        ),
+      ],
     );
   }
 
-  Widget _buildCalendarPlaceholder() {
-    return Container(
-      color: Colors.grey[200],
-      child: Center(
-        child: Text(
-          '${DateFormat('yyyy.MM').format(selectedMonth)} 달력 영역',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+  Widget _buildLowerMonth(DateTime nextMonth) {
+    return Column(
+      children: [
+        const SizedBox(height: 4),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: _buildMonthItem(nextMonth, isSelected: false),
         ),
+      ],
+    );
+  }
+
+  Widget _buildCalendar() {
+    final monthTitle = DateFormat('MM월', 'ko').format(selectedMonth);
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          Text(
+            monthTitle,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          TableCalendar(
+            locale: 'ko_KR',
+            focusedDay: selectedMonth,
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            headerVisible: false,
+            calendarFormat: CalendarFormat.month,
+            selectedDayPredicate:
+                (day) =>
+                    day.year == selectedMonth.year &&
+                    day.month == selectedMonth.month,
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                selectedMonth = DateTime(selectedDay.year, selectedDay.month);
+              });
+            },
+            onPageChanged: (focusedDay) {
+              setState(() {
+                selectedMonth = DateTime(focusedDay.year, focusedDay.month);
+              });
+            },
+            eventLoader: (day) => [],
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, date, events) => const SizedBox.shrink(),
+              singleMarkerBuilder:
+                  (context, date, event) => const SizedBox.shrink(),
+              defaultBuilder: (context, day, focusedDay) {
+                return Center(
+                  child: Text(
+                    '${day.day}',
+                    style: const TextStyle(fontSize: 12, color: Colors.black),
+                  ),
+                );
+              },
+              todayBuilder: (context, day, focusedDay) {
+                return Center(
+                  child: Text(
+                    '${day.day}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
+              selectedBuilder: (context, day, focusedDay) {
+                return Center(
+                  child: Text(
+                    '${day.day}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
+    final DateTime previousMonth = DateTime(
+      selectedMonth.year,
+      selectedMonth.month - 1,
+    );
+    final DateTime nextMonth = DateTime(
+      selectedMonth.year,
+      selectedMonth.month + 1,
+    );
+
     return Scaffold(
-      appBar: AppBar(title: const Text('캘린더')),
-      body: Column(
-        children: [
-          SizedBox(height: screenHeight * 0.2, child: _buildMonthSelector()),
-          SizedBox(
-            height: screenHeight * 0.6,
-            child: _buildCalendarPlaceholder(),
+      backgroundColor: const Color.fromRGBO(247, 247, 249, 1),
+      appBar: null, // 위 공간 확보 위해 appBar 제거
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            children: [
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.87,
+                  child: _buildUpperMonths(previousMonth, selectedMonth),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                flex: 6,
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.82,
+                  child: _buildCalendar(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                flex: 1,
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  child: _buildLowerMonth(nextMonth),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
           ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        currentIndex: 1, // 캘린더는 두 번째 탭
-        selectedItemColor: const Color.fromRGBO(142, 198, 230, 1),
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          if (index == 2) {
-            Navigator.pushReplacementNamed(context, '/'); // 홈으로 이동
-          }
-          // 필요한 경우 다른 페이지도 라우팅
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: '리스트'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: '캘린더',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
-          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: '그래프'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none),
-            label: '알림',
-          ),
-        ],
+        ),
       ),
     );
   }

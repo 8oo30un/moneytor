@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:moneytor/calendar_page.dart';
 import 'package:moneytor/home.dart';
 import 'login.dart';
 import 'firebase_options.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('ko', null);
   runApp(const InitializationApp());
 }
 

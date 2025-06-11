@@ -22,9 +22,11 @@ class HomePage extends StatefulWidget {
 
 enum SortType { price, date }
 
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  late AnimationController _shakeController;
+
   int _selectedIndex = 2; // 홈이 기본 선택된 탭
+  late PageController _pageController;
 
   int currentPageIndex = 0;
   PageController pageController = PageController();
@@ -44,13 +46,13 @@ class _HomePageState extends State<HomePage>
 
   // List<String> categories => List<RegisterCardModel> registerCards 로 변경
   List<RegisterCardModel> registerCards = [];
-
-  late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
+
     registerCards.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
 
     final user = FirebaseAuth.instance.currentUser;
@@ -85,6 +87,12 @@ class _HomePageState extends State<HomePage>
     _calculateStatus();
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadRegisterCards() async {
     try {
       final cards = await _registerCardRepo.fetchRegisterCards();
@@ -99,10 +107,17 @@ class _HomePageState extends State<HomePage>
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-      // Add navigation logic here if needed
-    });
+    if (index == 1) {
+      // 캘린더 페이지로 이동
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => CalendarPage()),
+      );
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   void _showAddCategoryDialog() {
@@ -317,6 +332,8 @@ class _HomePageState extends State<HomePage>
   @override
   @override
   Widget build(BuildContext context) {
+    final titles = ['리스트', '캘린더', '홈', '그래프', '알림'];
+
     return Scaffold(
       backgroundColor: const Color.fromRGBO(247, 247, 249, 1),
       appBar: AppBar(
@@ -340,150 +357,174 @@ class _HomePageState extends State<HomePage>
           ],
         ),
       ),
-      body: HomeContent(
-        registerCardRepo: _registerCardRepo,
-        userName: userName,
-        monthlyGoal: monthlyGoal,
-        todaySpending: todaySpending,
-        selectedCard: selectedCard,
-        statusColor: statusColor,
-        registerCards: registerCards,
-        isEditing: isEditing,
-        onEditingChanged: (bool editing) {
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
           setState(() {
-            isEditing = editing;
-            if (isEditing) {
-              _shakeController.repeat(reverse: true);
-            } else {
-              _shakeController.stop();
-            }
+            _selectedIndex = index;
           });
         },
-        onGoalSaved: (RegisterCardModel updatedCard) {
-          setState(() {
-            selectedCard = updatedCard;
-            int idx = registerCards.indexWhere((c) => c.id == updatedCard.id);
-            if (idx != -1) registerCards[idx] = updatedCard;
-          });
-          _calculateStatus();
-        },
-        onCardDeleted: (int index) async {
-          final cardId = registerCards[index].id;
-          try {
-            await _registerCardRepo.deleteRegisterCard(
-              cardId,
-            ); // Firestore 삭제 요청
-            setState(() {
-              registerCards.removeAt(index); // UI 상태에서 카드 제거
-              if (selectedCard?.id == cardId) {
-                selectedCard = null; // 삭제된 카드가 선택된 카드면 해제
+        children: [
+          // ListPage(),
+          // 0번: 리스트 페이지 (임시 빈 컨테이너 등)
+          Container(color: Colors.white), // 리스트 페이지 자리
+          CalendarPage(),
+          HomeContent(
+            registerCardRepo: _registerCardRepo,
+            userName: userName,
+            monthlyGoal: monthlyGoal,
+            todaySpending: todaySpending,
+            selectedCard: selectedCard,
+            statusColor: statusColor,
+            registerCards: registerCards,
+            isEditing: isEditing,
+            onEditingChanged: (bool editing) {
+              setState(() {
+                isEditing = editing;
+                if (isEditing) {
+                  _shakeController.repeat(reverse: true);
+                } else {
+                  _shakeController.stop();
+                }
+              });
+            },
+            onGoalSaved: (RegisterCardModel updatedCard) {
+              setState(() {
+                selectedCard = updatedCard;
+                int idx = registerCards.indexWhere(
+                  (c) => c.id == updatedCard.id,
+                );
+                if (idx != -1) registerCards[idx] = updatedCard;
+              });
+              _calculateStatus();
+            },
+            onCardDeleted: (int index) async {
+              final cardId = registerCards[index].id;
+              try {
+                await _registerCardRepo.deleteRegisterCard(
+                  cardId,
+                ); // Firestore 삭제 요청
+                setState(() {
+                  registerCards.removeAt(index); // UI 상태에서 카드 제거
+                  if (selectedCard?.id == cardId) {
+                    selectedCard = null; // 삭제된 카드가 선택된 카드면 해제
+                  }
+                });
+                print('✅ Firestore에서 카드 삭제 성공');
+              } catch (e) {
+                print('🔥 Firestore 카드 삭제 실패: $e');
               }
-            });
-            print('✅ Firestore에서 카드 삭제 성공');
-          } catch (e) {
-            print('🔥 Firestore 카드 삭제 실패: $e');
-          }
-        },
-        onCardSelected: (RegisterCardModel card) {
-          setState(() {
-            selectedCard = card;
-            currentPageIndex = 1;
-            pageController.animateToPage(
-              1,
-              duration: Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
-          });
-          _calculateStatus();
-        },
-        onShowAddCategoryDialog: _showAddCategoryDialog,
-        onAddExpense: _showAddExpenseDialog,
-        pageController: pageController,
-        currentPageIndex: currentPageIndex,
-        onBackToCardGrid: (int pageIndex) {
-          setState(() {
-            currentPageIndex = pageIndex;
-            if (pageIndex == 0) selectedCard = null;
-          });
-          _calculateStatus(); // ✅ Update total spending and status
-          pageController.animateToPage(
-            pageIndex,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        },
-        selectedSort: selectedSort,
-        isAscending: isAscending,
-        onSortToggle: (SortType sortType) {
-          setState(() {
-            if (selectedSort == sortType) {
-              isAscending = !isAscending;
-            } else {
-              selectedSort = sortType;
-              isAscending = false;
-            }
-            if (selectedSort == SortType.price) {
-              togglePriceSort();
-            } else {
-              toggleDateSort();
-            }
-          });
-        },
-        shakeAnimation: _shakeAnimation,
-        onExpenseDeleted: (int index) async {
-          if (selectedCard == null) return;
-
-          final updatedExpenses = List<Map<String, dynamic>>.from(
-            selectedCard!.expenses,
-          )..removeAt(index);
-          final updatedTotal = updatedExpenses.fold<int>(
-            0,
-            (sum, e) => sum + (e['price'] as int),
-          );
-          final updatedCard = selectedCard!.copyWith(
-            expenses: updatedExpenses,
-            totalAmount: updatedTotal,
-          );
-
-          try {
-            await _registerCardRepo.updateRegisterCard(updatedCard);
-            setState(() {
-              selectedCard = updatedCard;
-              final idx = registerCards.indexWhere(
-                (c) => c.id == updatedCard.id,
+            },
+            onCardSelected: (RegisterCardModel card) {
+              setState(() {
+                selectedCard = card;
+                currentPageIndex = 1;
+                pageController.animateToPage(
+                  1,
+                  duration: Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              });
+              _calculateStatus();
+            },
+            onShowAddCategoryDialog: _showAddCategoryDialog,
+            onAddExpense: _showAddExpenseDialog,
+            pageController: pageController,
+            currentPageIndex: currentPageIndex,
+            onBackToCardGrid: (int pageIndex) {
+              setState(() {
+                currentPageIndex = pageIndex;
+                if (pageIndex == 0) selectedCard = null;
+              });
+              _calculateStatus(); // ✅ Update total spending and status
+              pageController.animateToPage(
+                pageIndex,
+                duration: Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
               );
-              if (idx != -1) registerCards[idx] = updatedCard;
-            });
-            _calculateStatus();
-          } catch (e) {
-            print('🔥 Firestore 지출 삭제 실패: $e');
-          }
-        },
-        onExpenseNameChanged: (int index, String newName) async {
-          if (selectedCard == null) return;
+            },
+            selectedSort: selectedSort,
+            isAscending: isAscending,
+            onSortToggle: (SortType sortType) {
+              setState(() {
+                if (selectedSort == sortType) {
+                  isAscending = !isAscending;
+                } else {
+                  selectedSort = sortType;
+                  isAscending = false;
+                }
+                if (selectedSort == SortType.price) {
+                  togglePriceSort();
+                } else {
+                  toggleDateSort();
+                }
+              });
+            },
+            shakeAnimation: _shakeAnimation,
+            onExpenseDeleted: (int index) async {
+              if (selectedCard == null) return;
 
-          final updatedExpenses = List<Map<String, dynamic>>.from(
-            selectedCard!.expenses,
-          );
-          updatedExpenses[index]['name'] = newName;
-
-          final updatedCard = selectedCard!.copyWith(expenses: updatedExpenses);
-
-          try {
-            await _registerCardRepo.updateRegisterCard(updatedCard);
-            setState(() {
-              selectedCard = updatedCard;
-              final idx = registerCards.indexWhere(
-                (c) => c.id == updatedCard.id,
+              final updatedExpenses = List<Map<String, dynamic>>.from(
+                selectedCard!.expenses,
+              )..removeAt(index);
+              final updatedTotal = updatedExpenses.fold<int>(
+                0,
+                (sum, e) => sum + (e['price'] as int),
               );
-              if (idx != -1) registerCards[idx] = updatedCard;
-            });
-            print('✅ Firestore에 지출 이름 수정됨');
-          } catch (e) {
-            print('🔥 Firestore 지출 이름 수정 실패: $e');
-          }
-        },
+              final updatedCard = selectedCard!.copyWith(
+                expenses: updatedExpenses,
+                totalAmount: updatedTotal,
+              );
+
+              try {
+                await _registerCardRepo.updateRegisterCard(updatedCard);
+                setState(() {
+                  selectedCard = updatedCard;
+                  final idx = registerCards.indexWhere(
+                    (c) => c.id == updatedCard.id,
+                  );
+                  if (idx != -1) registerCards[idx] = updatedCard;
+                });
+                _calculateStatus();
+              } catch (e) {
+                print('🔥 Firestore 지출 삭제 실패: $e');
+              }
+            },
+            onExpenseNameChanged: (int index, String newName) async {
+              if (selectedCard == null) return;
+
+              final updatedExpenses = List<Map<String, dynamic>>.from(
+                selectedCard!.expenses,
+              );
+              updatedExpenses[index]['name'] = newName;
+
+              final updatedCard = selectedCard!.copyWith(
+                expenses: updatedExpenses,
+              );
+
+              try {
+                await _registerCardRepo.updateRegisterCard(updatedCard);
+                setState(() {
+                  selectedCard = updatedCard;
+                  final idx = registerCards.indexWhere(
+                    (c) => c.id == updatedCard.id,
+                  );
+                  if (idx != -1) registerCards[idx] = updatedCard;
+                });
+                print('✅ Firestore에 지출 이름 수정됨');
+              } catch (e) {
+                print('🔥 Firestore 지출 이름 수정 실패: $e');
+              }
+            },
+          ),
+          // ChartPage(),
+          // NotificationPage(),
+          Container(color: Colors.white),
+          // 4번: 알림 페이지 (임시)
+          Container(color: Colors.white),
+        ],
       ),
+
       // 기존 바텀바 코드 유지
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
@@ -494,13 +535,11 @@ class _HomePageState extends State<HomePage>
           setState(() {
             _selectedIndex = index;
           });
-
-          if (index == 1) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => CalendarPage()),
-            );
-          }
+          _pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.list), label: '리스트'),
