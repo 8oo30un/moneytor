@@ -96,7 +96,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
         child: Container(
           decoration: BoxDecoration(
-            color: Color.fromRGBO(247, 247, 249, 1),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
           ),
           padding: const EdgeInsets.all(16),
@@ -129,6 +129,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                         _saveSpendingGoal(goal);
                         setState(() {
                           isEditingGoal = false;
+
                           if (widget.selectedCard != null) {
                             final updatedCard = widget.selectedCard!.copyWith(
                               spendingGoal: goal,
@@ -137,6 +138,10 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                               monthlyGoal: goal,
                               todaySpending: updatedCard.totalAmount,
                             );
+                            print(
+                              '📤 onGoalSaved 호출됨 - updatedCard.spendingGoal: ${updatedCard.spendingGoal}',
+                            );
+
                             widget.onGoalSaved(updatedCard);
                           }
                         });
@@ -188,7 +193,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
-          color: Color.fromRGBO(247, 247, 249, 1),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(16),
