@@ -18,6 +18,10 @@ class SpendingStatusDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (selectedCard != null && selectedCard!.spendingGoal == null) {
+      return const SizedBox.shrink(); // No content when goal is null
+    }
+
     final int goal = selectedCard?.spendingGoal ?? monthlyGoal;
     final int spending = selectedCard?.totalAmount ?? todaySpending;
 
@@ -40,7 +44,7 @@ class SpendingStatusDisplay extends StatelessWidget {
                 text: selectedCard!.name,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.black, // 기본 텍스트 색상 유지
+                  color: Colors.black,
                 ),
               ),
               const TextSpan(text: ' 카테고리에서\n'),

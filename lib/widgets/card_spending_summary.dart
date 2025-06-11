@@ -69,6 +69,14 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
       widget.registerCards,
     );
     final card = widget.selectedCard;
+    final goal = card?.spendingGoal;
+    final status = calculateSpendingStatus(
+      monthlyGoal: goal ?? widget.monthlyGoal,
+      todaySpending: card?.totalAmount ?? widget.todaySpending,
+    );
+
+    final Color backgroundColor =
+        goal == null ? const Color.fromRGBO(247, 247, 249, 1) : status.color;
 
     if (card == null) {
       return _buildSummaryUI(
@@ -79,6 +87,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
           monthlyGoal: widget.monthlyGoal,
           todaySpending: totalSpending,
         ),
+        backgroundColor: const Color.fromRGBO(247, 247, 249, 1),
       );
     }
 
@@ -87,7 +96,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Color.fromRGBO(247, 247, 249, 1),
             borderRadius: BorderRadius.circular(16),
           ),
           padding: const EdgeInsets.all(16),
@@ -115,10 +124,21 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                   ElevatedButton(
                     onPressed: () {
                       final goal = int.tryParse(_goalController.text);
+                      print('🎯 입력된 목표 지출(goal): $goal');
                       if (goal != null && goal > 0) {
                         _saveSpendingGoal(goal);
                         setState(() {
                           isEditingGoal = false;
+                          if (widget.selectedCard != null) {
+                            final updatedCard = widget.selectedCard!.copyWith(
+                              spendingGoal: goal,
+                            );
+                            final newStatus = calculateSpendingStatus(
+                              monthlyGoal: goal,
+                              todaySpending: updatedCard.totalAmount,
+                            );
+                            widget.onGoalSaved(updatedCard);
+                          }
                         });
                       }
                     },
@@ -153,6 +173,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
         monthlyGoal: card.spendingGoal ?? widget.monthlyGoal,
         todaySpending: card.totalAmount,
       ),
+      backgroundColor: Color.fromRGBO(247, 247, 249, 1),
     );
   }
 
@@ -161,12 +182,13 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
     required int spending,
     required int goal,
     required SpendingStatus status, // 추가
+    required Color backgroundColor, // 추가
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Color.fromRGBO(247, 247, 249, 1),
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(16),

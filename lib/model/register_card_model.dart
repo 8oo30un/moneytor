@@ -3,6 +3,7 @@ class RegisterCardModel {
   final String id;
   final String name;
   final int totalAmount;
+
   final List<Map<String, dynamic>> expenses;
   final int? spendingGoal; // 목표 지출 (nullable)
 
