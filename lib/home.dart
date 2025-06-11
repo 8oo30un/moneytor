@@ -9,6 +9,7 @@ import 'widgets/spending_status_display.dart';
 import 'model/register_card_model.dart';
 import 'data/register_card_repository.dart';
 import 'utils/status_utils.dart';
+import 'widgets/card_spending_detail_grid.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -279,6 +280,7 @@ class _HomePageState extends State<HomePage>
               _calculateStatus(); // ✅ 이거 꼭 추가
             },
           ),
+          //TODO: 지출 영역
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -872,332 +874,336 @@ class _HomePageState extends State<HomePage>
                                   padding: const EdgeInsets.all(0),
                                   child: Builder(
                                     builder: (_) {
-                                      return Column(
-                                        children: [
-                                          // Top bar with back button and title
-                                          Row(
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(
-                                                  Icons.arrow_back,
+                                      return SingleChildScrollView(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            // 상단 바
+                                            Row(
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.arrow_back,
+                                                  ),
+                                                  onPressed: () {
+                                                    pageController
+                                                        .animateToPage(
+                                                          0,
+                                                          duration:
+                                                              const Duration(
+                                                                milliseconds:
+                                                                    300,
+                                                              ),
+                                                          curve:
+                                                              Curves.easeInOut,
+                                                        );
+                                                    setState(() {
+                                                      currentPageIndex = 0;
+                                                      selectedCard = null;
+                                                      registerCards.sort(
+                                                        (a, b) => b.totalAmount
+                                                            .compareTo(
+                                                              a.totalAmount,
+                                                            ),
+                                                      );
+                                                    });
+                                                    _calculateStatus();
+                                                  },
                                                 ),
-                                                onPressed: () {
-                                                  pageController.animateToPage(
-                                                    0,
-                                                    duration: const Duration(
-                                                      milliseconds: 300,
-                                                    ),
-                                                    curve: Curves.easeInOut,
-                                                  );
-                                                  setState(() {
-                                                    currentPageIndex = 0;
-                                                    selectedCard = null;
-                                                    registerCards.sort(
-                                                      (a, b) => b.totalAmount
-                                                          .compareTo(
-                                                            a.totalAmount,
-                                                          ),
-                                                    );
-                                                  });
-                                                  _calculateStatus();
-                                                },
-                                              ),
-                                              Expanded(
-                                                child: Center(
-                                                  child: Text(
-                                                    selectedCard?.name ??
-                                                        '선택된 카드 없음',
-                                                    style: const TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                                Expanded(
+                                                  child: Center(
+                                                    child: Text(
+                                                      selectedCard?.name ??
+                                                          '선택된 카드 없음',
+                                                      style: const TextStyle(
+                                                        fontSize: 18,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(Icons.add),
-                                                onPressed: () {
-                                                  String expenseName = '';
-                                                  String expensePrice = '';
+                                                IconButton(
+                                                  icon: const Icon(Icons.add),
+                                                  onPressed: () {
+                                                    String expenseName = '';
+                                                    String expensePrice = '';
 
-                                                  showDialog(
-                                                    context: context,
-                                                    builder: (
-                                                      BuildContext context,
-                                                    ) {
-                                                      return AlertDialog(
-                                                        title: const Text(
-                                                          '지출 추가',
-                                                        ),
-                                                        content: Column(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            TextField(
-                                                              decoration:
-                                                                  const InputDecoration(
-                                                                    labelText:
-                                                                        '지출 항목 이름',
-                                                                  ),
-                                                              onChanged: (
-                                                                value,
-                                                              ) {
-                                                                expenseName =
-                                                                    value;
-                                                              },
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (
+                                                        BuildContext context,
+                                                      ) {
+                                                        return AlertDialog(
+                                                          title: const Text(
+                                                            '지출 추가',
+                                                          ),
+                                                          content: Column(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              TextField(
+                                                                decoration:
+                                                                    const InputDecoration(
+                                                                      labelText:
+                                                                          '지출 항목 이름',
+                                                                    ),
+                                                                onChanged: (
+                                                                  value,
+                                                                ) {
+                                                                  expenseName =
+                                                                      value;
+                                                                },
+                                                              ),
+                                                              TextField(
+                                                                decoration:
+                                                                    const InputDecoration(
+                                                                      labelText:
+                                                                          '금액',
+                                                                    ),
+                                                                keyboardType:
+                                                                    TextInputType
+                                                                        .number,
+                                                                onChanged: (
+                                                                  value,
+                                                                ) {
+                                                                  expensePrice =
+                                                                      value;
+                                                                },
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          actions: [
+                                                            TextButton(
+                                                              onPressed:
+                                                                  () =>
+                                                                      Navigator.of(
+                                                                        context,
+                                                                      ).pop(),
+                                                              child: const Text(
+                                                                '취소',
+                                                              ),
                                                             ),
-                                                            TextField(
-                                                              decoration:
-                                                                  const InputDecoration(
-                                                                    labelText:
-                                                                        '금액',
-                                                                  ),
-                                                              keyboardType:
-                                                                  TextInputType
-                                                                      .number,
-                                                              onChanged: (
-                                                                value,
-                                                              ) {
-                                                                expensePrice =
-                                                                    value;
-                                                              },
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        actions: [
-                                                          TextButton(
-                                                            onPressed:
-                                                                () =>
+                                                            TextButton(
+                                                              onPressed: () async {
+                                                                if (expenseName
+                                                                        .trim()
+                                                                        .isNotEmpty &&
+                                                                    int.tryParse(
+                                                                          expensePrice,
+                                                                        ) !=
+                                                                        null &&
+                                                                    selectedCard !=
+                                                                        null) {
+                                                                  final newExpense = {
+                                                                    'name':
+                                                                        expenseName
+                                                                            .trim(),
+                                                                    'price':
+                                                                        int.parse(
+                                                                          expensePrice,
+                                                                        ),
+                                                                    'date':
+                                                                        DateTime.now()
+                                                                            .toIso8601String(),
+                                                                  };
+
+                                                                  final updatedExpenses = List<
+                                                                    Map<
+                                                                      String,
+                                                                      dynamic
+                                                                    >
+                                                                  >.from(
+                                                                    selectedCard!
+                                                                        .expenses,
+                                                                  )..add(
+                                                                    newExpense,
+                                                                  );
+
+                                                                  final updatedTotal = updatedExpenses.fold<
+                                                                    int
+                                                                  >(0, (
+                                                                    sum,
+                                                                    item,
+                                                                  ) {
+                                                                    return sum +
+                                                                        (item['price']
+                                                                            as int);
+                                                                  });
+
+                                                                  final updatedCard = RegisterCardModel(
+                                                                    id:
+                                                                        selectedCard!
+                                                                            .id,
+                                                                    name:
+                                                                        selectedCard!
+                                                                            .name,
+                                                                    expenses:
+                                                                        updatedExpenses,
+                                                                    totalAmount:
+                                                                        updatedTotal,
+                                                                    spendingGoal:
+                                                                        selectedCard!
+                                                                            .spendingGoal,
+                                                                  );
+
+                                                                  try {
+                                                                    await _registerCardRepo
+                                                                        .updateRegisterCard(
+                                                                          updatedCard,
+                                                                        );
+                                                                    setState(() {
+                                                                      selectedCard =
+                                                                          updatedCard;
+                                                                      final idx = registerCards.indexWhere(
+                                                                        (c) =>
+                                                                            c.id ==
+                                                                            updatedCard.id,
+                                                                      );
+                                                                      if (idx !=
+                                                                          -1) {
+                                                                        registerCards[idx] =
+                                                                            updatedCard;
+                                                                      }
+                                                                      todaySpending =
+                                                                          RegisterCardModel.calculateTotalSpending(
+                                                                            registerCards,
+                                                                          );
+                                                                      statusColor =
+                                                                          calculateSpendingStatus(
+                                                                            monthlyGoal:
+                                                                                updatedCard.spendingGoal ??
+                                                                                monthlyGoal,
+                                                                            todaySpending:
+                                                                                updatedCard.totalAmount,
+                                                                          ).color;
+                                                                    });
                                                                     Navigator.of(
                                                                       context,
-                                                                    ).pop(),
-                                                            child: const Text(
-                                                              '취소',
-                                                            ),
-                                                          ),
-                                                          TextButton(
-                                                            onPressed: () async {
-                                                              if (expenseName
-                                                                      .trim()
-                                                                      .isNotEmpty &&
-                                                                  int.tryParse(
-                                                                        expensePrice,
-                                                                      ) !=
-                                                                      null &&
-                                                                  selectedCard !=
-                                                                      null) {
-                                                                final newExpense = {
-                                                                  'name':
-                                                                      expenseName
-                                                                          .trim(),
-                                                                  'price':
-                                                                      int.parse(
-                                                                        expensePrice,
-                                                                      ),
-                                                                  'date':
-                                                                      DateTime.now()
-                                                                          .toIso8601String(),
-                                                                };
-
-                                                                final updatedExpenses = List<
-                                                                  Map<
-                                                                    String,
-                                                                    dynamic
-                                                                  >
-                                                                >.from(
-                                                                  selectedCard!
-                                                                      .expenses,
-                                                                )..add(
-                                                                  newExpense,
-                                                                );
-
-                                                                final updatedTotal =
-                                                                    updatedExpenses.fold<
-                                                                      int
-                                                                    >(
-                                                                      0,
-                                                                      (
-                                                                        sum,
-                                                                        item,
-                                                                      ) =>
-                                                                          sum +
-                                                                          (item['price']
-                                                                              as int),
+                                                                    ).pop();
+                                                                  } catch (e) {
+                                                                    print(
+                                                                      '❌ Firestore 저장 실패: $e',
                                                                     );
-
-                                                                final updatedCard = RegisterCardModel(
-                                                                  id:
-                                                                      selectedCard!
-                                                                          .id,
-                                                                  name:
-                                                                      selectedCard!
-                                                                          .name,
-                                                                  expenses:
-                                                                      updatedExpenses,
-                                                                  totalAmount:
-                                                                      updatedTotal,
-                                                                  spendingGoal:
-                                                                      selectedCard!
-                                                                          .spendingGoal,
-                                                                );
-
-                                                                try {
-                                                                  await _registerCardRepo
-                                                                      .updateRegisterCard(
-                                                                        updatedCard,
-                                                                      );
-                                                                  setState(() {
-                                                                    selectedCard =
-                                                                        updatedCard;
-                                                                    int
-                                                                    idx = registerCards.indexWhere(
-                                                                      (card) =>
-                                                                          card.id ==
-                                                                          updatedCard
-                                                                              .id,
-                                                                    );
-                                                                    if (idx !=
-                                                                        -1) {
-                                                                      registerCards[idx] =
-                                                                          updatedCard;
-                                                                    }
-                                                                    todaySpending =
-                                                                        RegisterCardModel.calculateTotalSpending(
-                                                                          registerCards,
-                                                                        );
-
-                                                                    // ✅ statusColor 재계산
-                                                                    statusColor =
-                                                                        calculateSpendingStatus(
-                                                                          monthlyGoal:
-                                                                              updatedCard.spendingGoal ??
-                                                                              monthlyGoal,
-                                                                          todaySpending:
-                                                                              updatedCard.totalAmount,
-                                                                        ).color;
-                                                                  });
-                                                                  Navigator.of(
-                                                                    context,
-                                                                  ).pop();
-                                                                } catch (e) {
-                                                                  print(
-                                                                    '❌ Firestore 저장 실패: $e',
-                                                                  );
-                                                                  Navigator.of(
-                                                                    context,
-                                                                  ).pop();
+                                                                    Navigator.of(
+                                                                      context,
+                                                                    ).pop();
+                                                                  }
                                                                 }
-                                                              }
-                                                            },
-                                                            child: const Text(
-                                                              '추가',
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      );
-                                                    },
-                                                  );
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Expanded(
-                                            child: ListView(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 0,
-                                                    vertical: 12,
-                                                  ),
-                                              children: [
-                                                if (selectedCard != null)
-                                                  ...selectedCard!.expenses.asMap().entries.map((
-                                                    entry,
-                                                  ) {
-                                                    final index = entry.key;
-                                                    final expense = entry.value;
-                                                    final controller =
-                                                        TextEditingController(
-                                                          text: expense['name'],
-                                                        );
-
-                                                    return ListTile(
-                                                      title:
-                                                          isEditing
-                                                              ? TextFormField(
-                                                                controller:
-                                                                    controller,
-                                                                onChanged: (
-                                                                  newName,
-                                                                ) {
-                                                                  setState(() {
-                                                                    selectedCard!
-                                                                            .expenses[index]['name'] =
-                                                                        newName;
-                                                                  });
-                                                                },
-                                                                decoration: const InputDecoration(
-                                                                  border:
-                                                                      UnderlineInputBorder(),
-                                                                  isDense: true,
-                                                                  contentPadding:
-                                                                      EdgeInsets.symmetric(
-                                                                        vertical:
-                                                                            8,
-                                                                      ),
-                                                                ),
-                                                              )
-                                                              : Text(
-                                                                expense['name'],
-                                                              ),
-                                                      trailing: Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Text(
-                                                            '${expense['price']}원',
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 8,
-                                                          ),
-                                                          if (expense['date'] !=
-                                                              null)
-                                                            Text(
-                                                              DateFormat(
-                                                                'M월 d일 HH:mm',
-                                                              ).format(
-                                                                DateTime.parse(
-                                                                  expense['date'],
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          if (isEditing)
-                                                            IconButton(
-                                                              icon: const Icon(
-                                                                Icons.close,
-                                                                size: 18,
-                                                                color:
-                                                                    Colors.red,
-                                                              ),
-                                                              onPressed: () {
-                                                                setState(() {
-                                                                  selectedCard!
-                                                                      .expenses
-                                                                      .removeAt(
-                                                                        index,
-                                                                      );
-                                                                });
                                                               },
+                                                              child: const Text(
+                                                                '추가',
+                                                              ),
                                                             ),
-                                                        ],
-                                                      ),
+                                                          ],
+                                                        );
+                                                      },
                                                     );
-                                                  }).toList(),
+                                                  },
+                                                ),
                                               ],
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(height: 12),
+
+                                            // 🔽 리스트 출력 - Expanded 없이 Column으로만 구성
+                                            if (selectedCard != null &&
+                                                selectedCard!
+                                                    .expenses
+                                                    .isNotEmpty) ...[
+                                              const SizedBox(height: 12),
+                                              ...selectedCard!.expenses.asMap().entries.map((
+                                                entry,
+                                              ) {
+                                                final index = entry.key;
+                                                final expense = entry.value;
+                                                final controller =
+                                                    TextEditingController(
+                                                      text: expense['name'],
+                                                    );
+
+                                                return ListTile(
+                                                  title:
+                                                      isEditing
+                                                          ? TextFormField(
+                                                            controller:
+                                                                controller,
+                                                            onChanged: (
+                                                              newName,
+                                                            ) {
+                                                              setState(() {
+                                                                selectedCard!
+                                                                        .expenses[index]['name'] =
+                                                                    newName;
+                                                              });
+                                                            },
+                                                            decoration: const InputDecoration(
+                                                              border:
+                                                                  UnderlineInputBorder(),
+                                                              isDense: true,
+                                                              contentPadding:
+                                                                  EdgeInsets.symmetric(
+                                                                    vertical: 8,
+                                                                  ),
+                                                            ),
+                                                          )
+                                                          : Text(
+                                                            expense['name'],
+                                                          ),
+                                                  trailing: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        '${expense['price']}원',
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      if (expense['date'] !=
+                                                          null)
+                                                        Text(
+                                                          DateFormat(
+                                                            'M월 d일 HH:mm',
+                                                          ).format(
+                                                            DateTime.tryParse(
+                                                                  expense['date'],
+                                                                ) ??
+                                                                DateTime.now(),
+                                                          ),
+                                                        ),
+                                                      if (isEditing)
+                                                        IconButton(
+                                                          icon: const Icon(
+                                                            Icons.close,
+                                                            size: 18,
+                                                            color: Colors.red,
+                                                          ),
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              selectedCard!
+                                                                  .expenses
+                                                                  .removeAt(
+                                                                    index,
+                                                                  );
+                                                            });
+                                                          },
+                                                        ),
+                                                    ],
+                                                  ),
+                                                );
+                                              }).toList(),
+                                              if (selectedCard != null) ...[
+                                                CardSpendingDetailGrid(
+                                                  card: selectedCard!,
+                                                  statusColor: statusColor,
+                                                ),
+                                              ],
+                                            ],
+                                          ],
+                                        ),
                                       );
                                     },
                                   ),
@@ -1213,6 +1219,7 @@ class _HomePageState extends State<HomePage>
           ),
         ],
       ),
+
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
         currentIndex: _selectedIndex,
