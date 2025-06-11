@@ -165,20 +165,32 @@ class _HomePageState extends State<HomePage>
   }
 
   void togglePriceSort() {
+    print('🟡 togglePriceSort 호출됨');
+
     setState(() {
-      if (selectedSort == SortType.price) {
-        isAscending = !isAscending;
+      selectedSort = SortType.price;
+      isAscending = !isAscending;
+
+      if (selectedCard == null) {
+        registerCards.sort(
+          (a, b) =>
+              isAscending
+                  ? a.totalAmount.compareTo(b.totalAmount)
+                  : b.totalAmount.compareTo(a.totalAmount),
+        );
+        print('✅ registerCards 가격 정렬 완료');
       } else {
-        selectedSort = SortType.price;
-        isAscending = false;
+        selectedCard = selectedCard!.copyWith(
+          expenses: List<Map<String, dynamic>>.from(selectedCard!.expenses)
+            ..sort(
+              (a, b) =>
+                  isAscending
+                      ? (a['price'] as int).compareTo(b['price'] as int)
+                      : (b['price'] as int).compareTo(a['price'] as int),
+            ),
+        );
+        print('✅ selectedCard.expenses 가격 정렬 완료');
       }
-      // Optionally, sort the registerCards list here if needed
-      registerCards.sort(
-        (a, b) =>
-            isAscending
-                ? a.totalAmount.compareTo(b.totalAmount)
-                : b.totalAmount.compareTo(a.totalAmount),
-      );
     });
   }
 
@@ -281,8 +293,53 @@ class _HomePageState extends State<HomePage>
                   children: [
                     Row(
                       children: [
+                        // 가격 정렬 버튼
                         OutlinedButton(
-                          onPressed: togglePriceSort,
+                          onPressed: () {
+                            setState(() {
+                              if (selectedSort == SortType.price) {
+                                isAscending = !isAscending;
+                              } else {
+                                selectedSort = SortType.price;
+                                isAscending = false;
+                              }
+
+                              if (selectedCard == null) {
+                                // 전체 카드 정렬
+                                registerCards.sort(
+                                  (a, b) =>
+                                      isAscending
+                                          ? a.totalAmount.compareTo(
+                                            b.totalAmount,
+                                          )
+                                          : b.totalAmount.compareTo(
+                                            a.totalAmount,
+                                          ),
+                                );
+                                print('✅ 전체 카드 가격 정렬 완료');
+                              } else {
+                                // 선택된 카드 지출 정렬
+                                final sortedExpenses =
+                                    List<Map<String, dynamic>>.from(
+                                      selectedCard!.expenses,
+                                    )..sort(
+                                      (a, b) =>
+                                          isAscending
+                                              ? (a['price'] as int).compareTo(
+                                                b['price'] as int,
+                                              )
+                                              : (b['price'] as int).compareTo(
+                                                a['price'] as int,
+                                              ),
+                                    );
+
+                                selectedCard = selectedCard!.copyWith(
+                                  expenses: sortedExpenses,
+                                );
+                                print('✅ 상세 카드 지출 가격 정렬 완료');
+                              }
+                            });
+                          },
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(80, 36),
                             backgroundColor: const Color.fromRGBO(
@@ -325,9 +382,75 @@ class _HomePageState extends State<HomePage>
                             ],
                           ),
                         ),
+
                         const SizedBox(width: 8),
+
+                        // 날짜 정렬 버튼
                         OutlinedButton(
-                          onPressed: toggleDateSort,
+                          onPressed: () {
+                            setState(() {
+                              if (selectedSort == SortType.date) {
+                                isAscending = !isAscending;
+                              } else {
+                                selectedSort = SortType.date;
+                                isAscending = false;
+                              }
+
+                              if (selectedCard == null) {
+                                registerCards.sort((a, b) {
+                                  DateTime? aDate =
+                                      a.expenses.isNotEmpty &&
+                                              a.expenses.last['date'] != null
+                                          ? DateTime.tryParse(
+                                            a.expenses.last['date'],
+                                          )
+                                          : null;
+                                  DateTime? bDate =
+                                      b.expenses.isNotEmpty &&
+                                              b.expenses.last['date'] != null
+                                          ? DateTime.tryParse(
+                                            b.expenses.last['date'],
+                                          )
+                                          : null;
+
+                                  if (aDate == null && bDate == null) return 0;
+                                  if (aDate == null)
+                                    return isAscending ? 1 : -1;
+                                  if (bDate == null)
+                                    return isAscending ? -1 : 1;
+                                  return isAscending
+                                      ? aDate.compareTo(bDate)
+                                      : bDate.compareTo(aDate);
+                                });
+                                print('✅ 전체 카드 날짜 정렬 완료');
+                              } else {
+                                final sortedExpenses = List<
+                                  Map<String, dynamic>
+                                >.from(selectedCard!.expenses)..sort((a, b) {
+                                  DateTime? aDate = DateTime.tryParse(
+                                    a['date'] ?? '',
+                                  );
+                                  DateTime? bDate = DateTime.tryParse(
+                                    b['date'] ?? '',
+                                  );
+
+                                  if (aDate == null && bDate == null) return 0;
+                                  if (aDate == null)
+                                    return isAscending ? 1 : -1;
+                                  if (bDate == null)
+                                    return isAscending ? -1 : 1;
+                                  return isAscending
+                                      ? aDate.compareTo(bDate)
+                                      : bDate.compareTo(aDate);
+                                });
+
+                                selectedCard = selectedCard!.copyWith(
+                                  expenses: sortedExpenses,
+                                );
+                                print('✅ 상세 카드 지출 날짜 정렬 완료');
+                              }
+                            });
+                          },
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(80, 36),
                             backgroundColor: const Color.fromRGBO(
@@ -370,7 +493,10 @@ class _HomePageState extends State<HomePage>
                             ],
                           ),
                         ),
+
                         const Spacer(),
+
+                        // 수정 버튼
                         OutlinedButton(
                           onPressed: () async {
                             if (!isEditing) {
@@ -379,25 +505,19 @@ class _HomePageState extends State<HomePage>
                                 _shakeController.repeat(reverse: true);
                               });
                             } else {
-                              // ✅ Firestore에 업데이트된 이름 저장
                               for (int i = 0; i < registerCards.length; i++) {
                                 final card = registerCards[i];
                                 if (card.name.trim().isEmpty) continue;
 
-                                try {
-                                  final updatedCard = RegisterCardModel(
-                                    id: card.id,
-                                    name: card.name.trim(),
-                                    totalAmount: card.totalAmount,
-                                    expenses: card.expenses,
-                                    spendingGoal: card.spendingGoal,
-                                  );
+                                final updatedCard = card.copyWith(
+                                  name: card.name.trim(),
+                                );
 
+                                try {
                                   await _registerCardRepo.updateRegisterCard(
                                     updatedCard,
                                   );
 
-                                  // ✅ UI 상태 동기화
                                   setState(() {
                                     registerCards[i] = updatedCard;
                                     if (selectedCard?.id == updatedCard.id) {
@@ -409,7 +529,6 @@ class _HomePageState extends State<HomePage>
                                 }
                               }
 
-                              // ✅ 수정 모드 종료 및 UI 갱신
                               setState(() {
                                 isEditing = false;
                                 _shakeController.stop();
@@ -705,10 +824,6 @@ class _HomePageState extends State<HomePage>
                                   padding: const EdgeInsets.all(0),
                                   child: Builder(
                                     builder: (_) {
-                                      print(
-                                        '🧱 [HomePage] 상세 카드 영역 렌더링됨 - 카드 이름: ${selectedCard!.name}, goal: ${selectedCard!.spendingGoal}',
-                                      );
-
                                       return Column(
                                         children: [
                                           // Top bar with back button and title
