@@ -505,34 +505,82 @@ class _HomePageState extends State<HomePage>
                                 _shakeController.repeat(reverse: true);
                               });
                             } else {
-                              for (int i = 0; i < registerCards.length; i++) {
-                                final card = registerCards[i];
-                                if (card.name.trim().isEmpty) continue;
-
-                                final updatedCard = card.copyWith(
-                                  name: card.name.trim(),
-                                );
-
+                              if (selectedCard != null) {
                                 try {
+                                  // ✅ 총액 재계산
+                                  final updatedTotal = selectedCard!.expenses
+                                      .fold<int>(
+                                        0,
+                                        (sum, e) => sum + (e['price'] as int),
+                                      );
+
+                                  // ✅ 상태 계산
+                                  final status = calculateSpendingStatus(
+                                    monthlyGoal:
+                                        selectedCard!.spendingGoal ??
+                                        monthlyGoal,
+                                    todaySpending: updatedTotal,
+                                  );
+
+                                  final updatedCard = selectedCard!.copyWith(
+                                    totalAmount: updatedTotal,
+                                  );
+
                                   await _registerCardRepo.updateRegisterCard(
                                     updatedCard,
                                   );
 
                                   setState(() {
-                                    registerCards[i] = updatedCard;
-                                    if (selectedCard?.id == updatedCard.id) {
-                                      selectedCard = updatedCard;
-                                    }
-                                  });
-                                } catch (e) {
-                                  print('🔥 Firestore 업데이트 실패: $e');
-                                }
-                              }
+                                    int idx = registerCards.indexWhere(
+                                      (card) => card.id == updatedCard.id,
+                                    );
+                                    if (idx != -1)
+                                      registerCards[idx] = updatedCard;
 
-                              setState(() {
-                                isEditing = false;
-                                _shakeController.stop();
-                              });
+                                    selectedCard = updatedCard;
+                                    statusColor = status.color; // ✅ 상태 색상 업데이트
+                                    isEditing = false;
+                                    _shakeController.stop();
+                                  });
+
+                                  print(
+                                    '✅ Firestore 업데이트 완료: totalAmount = $updatedTotal, statusColor = $status',
+                                  );
+                                } catch (e) {
+                                  print(
+                                    '🔥 Firestore 업데이트 실패 (selectedCard): $e',
+                                  );
+                                }
+                              } else {
+                                // ✅ 전체 카드 목록 수정 모드일 때
+                                for (int i = 0; i < registerCards.length; i++) {
+                                  final card = registerCards[i];
+                                  if (card.name.trim().isEmpty) continue;
+
+                                  try {
+                                    final updatedCard = card.copyWith(
+                                      name: card.name.trim(),
+                                    );
+
+                                    await _registerCardRepo.updateRegisterCard(
+                                      updatedCard,
+                                    );
+
+                                    setState(() {
+                                      registerCards[i] = updatedCard;
+                                    });
+                                  } catch (e) {
+                                    print(
+                                      '🔥 Firestore 업데이트 실패 (registerCard): $e',
+                                    );
+                                  }
+                                }
+
+                                setState(() {
+                                  isEditing = false;
+                                  _shakeController.stop();
+                                });
+                              }
                             }
                           },
                           style: OutlinedButton.styleFrom(
@@ -1018,6 +1066,16 @@ class _HomePageState extends State<HomePage>
                                                                         RegisterCardModel.calculateTotalSpending(
                                                                           registerCards,
                                                                         );
+
+                                                                    // ✅ statusColor 재계산
+                                                                    statusColor =
+                                                                        calculateSpendingStatus(
+                                                                          monthlyGoal:
+                                                                              updatedCard.spendingGoal ??
+                                                                              monthlyGoal,
+                                                                          todaySpending:
+                                                                              updatedCard.totalAmount,
+                                                                        ).color;
                                                                   });
                                                                   Navigator.of(
                                                                     context,
@@ -1054,15 +1112,85 @@ class _HomePageState extends State<HomePage>
                                                   ),
                                               children: [
                                                 if (selectedCard != null)
-                                                  ...selectedCard!.expenses.map((
-                                                    expense,
+                                                  ...selectedCard!.expenses.asMap().entries.map((
+                                                    entry,
                                                   ) {
+                                                    final index = entry.key;
+                                                    final expense = entry.value;
+                                                    final controller =
+                                                        TextEditingController(
+                                                          text: expense['name'],
+                                                        );
+
                                                     return ListTile(
-                                                      title: Text(
-                                                        expense['name'],
-                                                      ),
-                                                      trailing: Text(
-                                                        '${expense['price']}원',
+                                                      title:
+                                                          isEditing
+                                                              ? TextFormField(
+                                                                controller:
+                                                                    controller,
+                                                                onChanged: (
+                                                                  newName,
+                                                                ) {
+                                                                  setState(() {
+                                                                    selectedCard!
+                                                                            .expenses[index]['name'] =
+                                                                        newName;
+                                                                  });
+                                                                },
+                                                                decoration: const InputDecoration(
+                                                                  border:
+                                                                      UnderlineInputBorder(),
+                                                                  isDense: true,
+                                                                  contentPadding:
+                                                                      EdgeInsets.symmetric(
+                                                                        vertical:
+                                                                            8,
+                                                                      ),
+                                                                ),
+                                                              )
+                                                              : Text(
+                                                                expense['name'],
+                                                              ),
+                                                      trailing: Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Text(
+                                                            '${expense['price']}원',
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 8,
+                                                          ),
+                                                          if (expense['date'] !=
+                                                              null)
+                                                            Text(
+                                                              DateFormat(
+                                                                'M월 d일 HH:mm',
+                                                              ).format(
+                                                                DateTime.parse(
+                                                                  expense['date'],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          if (isEditing)
+                                                            IconButton(
+                                                              icon: const Icon(
+                                                                Icons.close,
+                                                                size: 18,
+                                                                color:
+                                                                    Colors.red,
+                                                              ),
+                                                              onPressed: () {
+                                                                setState(() {
+                                                                  selectedCard!
+                                                                      .expenses
+                                                                      .removeAt(
+                                                                        index,
+                                                                      );
+                                                                });
+                                                              },
+                                                            ),
+                                                        ],
                                                       ),
                                                     );
                                                   }).toList(),
