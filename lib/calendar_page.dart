@@ -42,20 +42,11 @@ class _CalendarPageState extends State<CalendarPage> {
         selectedMonth.year == now.year && selectedMonth.month == now.month;
 
     if (!isCurrentMonth) {
-      print('[DEBUG] 상태바 업데이트 생략: 현재 달 아님');
       return;
     }
 
     final calculatedColor = _getWeeklyStatusBarColor();
-
-    if (calculatedColor != _weeklyStatusColor) {
-      print(
-        '[DEBUG] Weekly status color changed from $_weeklyStatusColor to $calculatedColor',
-      );
-      _weeklyStatusColor = calculatedColor;
-    } else {
-      print('[DEBUG] Weekly status color remains: $_weeklyStatusColor');
-    }
+    _weeklyStatusColor = calculatedColor;
   }
 
   Widget _buildMonthItem(DateTime month, {required bool isSelected}) {
@@ -121,7 +112,7 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Color? _getStatusColorForDay(DateTime day) {
-    if (day.isAfter(DateTime.now())) {
+    if (day.isAfter(DateTime.now().add(const Duration(days: 1)))) {
       return null;
     }
 
@@ -178,10 +169,6 @@ class _CalendarPageState extends State<CalendarPage> {
         }
       }
     }
-
-    print(
-      '[DEBUG] projectedSpending: $projectedSpending, weeklyGoal: $weeklyGoal',
-    );
 
     if (projectedSpending < weeklyGoal * 0.8) {
       return const Color.fromRGBO(152, 219, 204, 1); // 절약
@@ -252,9 +239,6 @@ class _CalendarPageState extends State<CalendarPage> {
                   barHeight = rowHeight - 22;
                 }
 
-                // Print weekly status color for debugging
-                print('DEBUG: Weekly status color: $_weeklyStatusColor');
-
                 // The TableCalendar widget is inside this Expanded.
                 return Stack(
                   children: [
@@ -269,7 +253,7 @@ class _CalendarPageState extends State<CalendarPage> {
                           margin: const EdgeInsets.symmetric(horizontal: 0),
                           height: barHeight + 12,
                           decoration: BoxDecoration(
-                            color: _weeklyStatusColor.withOpacity(0.3),
+                            color: _weeklyStatusColor.withOpacity(0.6),
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
@@ -386,6 +370,27 @@ class _CalendarPageState extends State<CalendarPage> {
                                     isInCurrentMonth
                                         ? Colors.black
                                         : const Color(0xFFB0B0B0),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                        outsideBuilder: (context, day, focusedDay) {
+                          // 저번달, 다음달 날짜 스타일도 동일하게 검정색, 동일 크기, 위치
+                          final color = _getStatusColorForDay(day);
+                          return Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: color ?? Colors.transparent,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${day.day}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: const Color(0xFFB0B0B0),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

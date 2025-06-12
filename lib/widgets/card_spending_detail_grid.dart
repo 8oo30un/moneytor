@@ -21,7 +21,7 @@ class CardSpendingDetailGrid extends StatelessWidget {
     final total = card.totalAmount;
 
     final goalAverage = (goal / daysInMonth).round();
-    final currentAverage = ((total / daysInMonth) * currentDay).round();
+    final currentAverage = ((total / currentDay)).round();
 
     Widget buildTile(String title, int amount) {
       return IntrinsicHeight(
