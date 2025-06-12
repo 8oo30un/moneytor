@@ -54,6 +54,9 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const HomePage(),
+      routes: {
+        '/login': (context) => const LoginPage(), // ✅ 로그인 경로 추가
+      },
     );
   }
 }

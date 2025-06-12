@@ -14,6 +14,7 @@ import 'calendar_page.dart';
 import 'home_content.dart'; // <-- Add this import for HomeContent
 import 'graph_page.dart';
 import 'notification_page.dart';
+import 'user_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -355,13 +356,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             IconButton(
               icon: const Icon(Icons.notifications_none),
               onPressed: () {
-                // TODO: 알림 페이지 이동
+                setState(() {
+                  _selectedIndex = 4;
+                  _pageController.jumpToPage(4);
+                });
               },
             ),
             IconButton(
               icon: const Icon(Icons.settings_outlined),
               onPressed: () {
-                // TODO: 설정 페이지 이동
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const UserPage()),
+                );
               },
             ),
           ],
