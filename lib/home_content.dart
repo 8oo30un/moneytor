@@ -78,11 +78,11 @@ class _HomeContentState extends State<HomeContent> {
     cachedSelectedCard = widget.selectedCard;
 
     cachedStatusColor =
-        cachedSelectedCard == null
-            ? Colors.grey
+        cachedSelectedCard == null ||
+                (cachedSelectedCard!.spendingGoal ?? 0) == 0
+            ? const Color.fromRGBO(247, 247, 249, 1) // 미설정 색상
             : calculateSpendingStatus(
-              monthlyGoal:
-                  cachedSelectedCard!.spendingGoal ?? widget.monthlyGoal,
+              monthlyGoal: cachedSelectedCard!.spendingGoal!,
               todaySpending: cachedSelectedCard!.totalAmount,
             ).color;
   }
@@ -94,11 +94,11 @@ class _HomeContentState extends State<HomeContent> {
     if (widget.selectedCard != oldWidget.selectedCard) {
       cachedSelectedCard = widget.selectedCard;
       cachedStatusColor =
-          cachedSelectedCard == null
-              ? Colors.grey
+          cachedSelectedCard == null ||
+                  (cachedSelectedCard!.spendingGoal ?? 0) == 0
+              ? const Color.fromRGBO(247, 247, 249, 1)
               : calculateSpendingStatus(
-                monthlyGoal:
-                    cachedSelectedCard!.spendingGoal ?? widget.monthlyGoal,
+                monthlyGoal: cachedSelectedCard!.spendingGoal!,
                 todaySpending: cachedSelectedCard!.totalAmount,
               ).color;
     }
@@ -331,7 +331,7 @@ class _HomeContentState extends State<HomeContent> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color:
-                        card.spendingGoal == null
+                        (card.spendingGoal ?? 0) == 0
                             ? const Color.fromRGBO(247, 247, 249, 1)
                             : calculateSpendingStatus(
                               monthlyGoal: card.spendingGoal!,
@@ -477,7 +477,7 @@ class _HomeContentState extends State<HomeContent> {
     return Container(
       decoration: BoxDecoration(
         color:
-            widget.selectedCard!.spendingGoal == null
+            (widget.selectedCard!.spendingGoal ?? 0) == 0
                 ? const Color.fromRGBO(247, 247, 249, 1)
                 : widget.statusColor,
         borderRadius: BorderRadius.circular(16),
@@ -569,7 +569,10 @@ class _HomeContentState extends State<HomeContent> {
             // 카드 상세 그리드
             CardSpendingDetailGrid(
               card: widget.selectedCard!,
-              statusColor: widget.statusColor,
+              statusColor:
+                  (widget.selectedCard!.spendingGoal ?? 0) == 0
+                      ? const Color.fromRGBO(247, 247, 249, 1)
+                      : widget.statusColor,
             ),
           ],
         ),

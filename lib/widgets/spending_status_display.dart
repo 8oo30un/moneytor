@@ -18,12 +18,22 @@ class SpendingStatusDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (selectedCard != null && selectedCard!.spendingGoal == null) {
-      return const SizedBox.shrink(); // No content when goal is null
-    }
-
     final int goal = selectedCard?.spendingGoal ?? monthlyGoal;
     final int spending = selectedCard?.totalAmount ?? todaySpending;
+
+    if (goal == 0) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Text(
+          '지출 금액을 설정해주세요',
+          style: TextStyle(
+            fontSize: 18.0,
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
 
     final status = calculateSpendingStatus(
       monthlyGoal: goal,

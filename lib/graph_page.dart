@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pie_chart/pie_chart.dart'
     as pc; // Make sure to add this package in pubspec.yaml
 import 'package:fl_chart/fl_chart.dart';
+import 'package:tuple/tuple.dart';
 import 'model/register_card_model.dart'; // Update the path according to your project structure
 import 'utils/status_utils.dart'; // or the correct path to calculateStatusFromCard
 
@@ -19,6 +20,7 @@ class GraphPage extends StatefulWidget {
 class _GraphPageState extends State<GraphPage> {
   Map<String, double> categoryExpenseMap = {};
   List<BarChartGroupData> _barChartGroups = [];
+  List<String> _sortedMonthKeys = [];
 
   @override
   void initState() {
@@ -42,13 +44,15 @@ class _GraphPageState extends State<GraphPage> {
       map[card.name] = total;
     }
 
+    final barData = _generateMonthlyBarData();
     setState(() {
       categoryExpenseMap = map;
-      _barChartGroups = _generateMonthlyBarData();
+      _barChartGroups = barData.item1;
+      _sortedMonthKeys = barData.item2;
     });
   }
 
-  List<BarChartGroupData> _generateMonthlyBarData() {
+  Tuple2<List<BarChartGroupData>, List<String>> _generateMonthlyBarData() {
     // Group expenses by month (format: yyyy-MM)
     final Map<String, double> monthlyTotals = {};
 
@@ -74,20 +78,66 @@ class _GraphPageState extends State<GraphPage> {
     // Sort by date string key and generate bar chart groups
     final sortedKeys = monthlyTotals.keys.toList()..sort();
     int index = 0;
-    return sortedKeys.map((key) {
-      final value = monthlyTotals[key]!;
-      return BarChartGroupData(
-        x: index++,
-        barRods: [
-          BarChartRodData(toY: value / 10000, color: Colors.blue),
-        ], // Scale for display
-      );
-    }).toList();
+    final groups =
+        sortedKeys.map((key) {
+          final value = monthlyTotals[key]!;
+          return BarChartGroupData(
+            x: index++,
+            barRods: [
+              BarChartRodData(
+                toY: value / 10000,
+                color: Colors.blue,
+                width: 16,
+                borderRadius: BorderRadius.circular(4),
+                rodStackItems: [],
+              ),
+            ], // Scale for display
+          );
+        }).toList();
+    return Tuple2(groups, sortedKeys);
   }
 
   String _getStatusForCard(RegisterCardModel card) {
     final result = calculateStatusFromCard(selectedCard: card);
     return result.status;
+  }
+
+  Color _getWeeklyStatusBarColorForGraph() {
+    final target = DateTime.now();
+    final remainingDays =
+        DateUtils.getDaysInMonth(target.year, target.month) - target.day;
+    if (remainingDays < 1) return Colors.transparent;
+
+    const totalGoal = 1000000;
+    final dailyGoal =
+        totalGoal / DateUtils.getDaysInMonth(target.year, target.month);
+    final weeklyGoal = (dailyGoal * 7).round();
+
+    final weekStart = target.subtract(Duration(days: target.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+
+    double projectedSpending = 0;
+    for (final card in widget.registerCards) {
+      for (final expense in card.expenses) {
+        final date = DateTime.tryParse(expense['date'] ?? '');
+        if (date != null &&
+            !date.isBefore(weekStart) &&
+            !date.isAfter(weekEnd)) {
+          final price = expense['price'];
+          if (price is int || price is double) {
+            projectedSpending += price.toDouble();
+          }
+        }
+      }
+    }
+
+    if (projectedSpending < weeklyGoal * 0.8) {
+      return const Color.fromRGBO(152, 219, 204, 1); // 절약
+    } else if (projectedSpending <= weeklyGoal * 1.2) {
+      return const Color.fromRGBO(161, 227, 249, 1); // 평균
+    } else {
+      return const Color.fromRGBO(255, 187, 135, 1); // 과소비
+    }
   }
 
   @override
@@ -108,42 +158,81 @@ class _GraphPageState extends State<GraphPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (totalSpending < totalGoal)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12.0),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text('이번 달 목표 지출을 잘 지키고 있어요 🏝️ '),
+                        // 목표 지출 상태 말풍선
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color:
+                                  totalSpending < totalGoal
+                                      ? const Color.fromRGBO(152, 219, 204, 1)
+                                      : const Color.fromRGBO(255, 187, 135, 1),
+                              borderRadius: BorderRadius.circular(16),
+                              // boxShadow removed
+                            ),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Text(
+                                  totalSpending < totalGoal
+                                      ? '이번 달 목표 지출을 잘 지키고 있어요 🏝️'
+                                      : '이번 달 목표 지출을 초과했어요 🚨',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                // 말풍선 꼬리
+                                Positioned(
+                                  bottom: -22,
+                                  left: 6,
+                                  child: CustomPaint(size: const Size(20, 10)),
+                                ),
+                              ],
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // 주간 상태 말풍선
                         Builder(
                           builder: (context) {
-                            final weeklyGoal = totalGoal / 4;
-                            final projectedSpending = totalSpending;
-                            final isOver = projectedSpending > weeklyGoal;
+                            final color =
+                                this._getWeeklyStatusBarColorForGraph();
+                            final text =
+                                color == const Color.fromRGBO(152, 219, 204, 1)
+                                    ? '이번 주 지출이 안정적이에요 👍'
+                                    : color ==
+                                        const Color.fromRGBO(161, 227, 249, 1)
+                                    ? '이번 주 지출이 평균적이에요 📊'
+                                    : '주의: 이번 주 예상 지출이 초과될 수 있어요 💸';
+
                             return Container(
                               margin: const EdgeInsets.only(bottom: 16),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color:
-                                    isOver ? Colors.red[100] : Colors.blue[50],
-                                borderRadius: BorderRadius.circular(8),
+                                color: color,
+                                borderRadius: BorderRadius.circular(16),
+                                // boxShadow removed
                               ),
-                              child: Text(
-                                isOver
-                                    ? '주의: 이번 주 예상 지출이 초과될 수 있어요 💸'
-                                    : '이번 주 지출이 안정적이에요 👍',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Text(
+                                    text,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           },
                         ),
+                        const SizedBox(height: 24),
+
                         const Text(
                           '월별 소비 추이',
                           style: TextStyle(
@@ -163,21 +252,35 @@ class _GraphPageState extends State<GraphPage> {
                                   sideTitles: SideTitles(
                                     showTitles: true,
                                     getTitlesWidget: (value, meta) {
-                                      const style = TextStyle(fontSize: 10);
                                       final index = value.toInt();
-                                      if (index < _barChartGroups.length) {
-                                        final sortedKeys =
-                                            categoryExpenseMap.keys.toList()
-                                              ..sort();
-                                        final label =
-                                            sortedKeys.length > index
-                                                ? sortedKeys[index]
-                                                : '';
-                                        return Text(label, style: style);
+                                      if (index < _sortedMonthKeys.length) {
+                                        final parts = _sortedMonthKeys[index]
+                                            .split('-');
+                                        if (parts.length == 2) {
+                                          final month =
+                                              int.tryParse(parts[1]) ?? 0;
+                                          return Text(
+                                            '${month}월',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black,
+                                            ),
+                                          );
+                                        }
                                       }
-                                      return Text('', style: style);
+                                      return const SizedBox.shrink();
                                     },
                                   ),
+                                ),
+                                leftTitles: AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                topTitles: AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                rightTitles: AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
                                 ),
                               ),
                               borderData: FlBorderData(show: false),
@@ -249,7 +352,11 @@ class _GraphPageState extends State<GraphPage> {
                                   Expanded(
                                     child: Text(
                                       entry.key,
-                                      style: const TextStyle(fontSize: 16),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                   Text(
@@ -257,6 +364,7 @@ class _GraphPageState extends State<GraphPage> {
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
+                                      color: Colors.black,
                                     ),
                                   ),
                                 ],

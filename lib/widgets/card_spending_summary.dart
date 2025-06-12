@@ -87,7 +87,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
       );
     }
 
-    if (card.spendingGoal == null || isEditingGoal) {
+    if (card.spendingGoal == null || isEditingGoal || card.spendingGoal == 0) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
         child: Container(
@@ -121,7 +121,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                     onPressed: () {
                       final goal = int.tryParse(_goalController.text);
                       print('🎯 입력된 목표 지출(goal): $goal');
-                      if (goal != null && goal > 0) {
+                      if (goal != null && goal >= 0) {
                         _saveSpendingGoal(goal);
                         setState(() {
                           isEditingGoal = false;
