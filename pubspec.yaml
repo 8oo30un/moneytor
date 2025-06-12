@@ -39,6 +39,7 @@ dependencies:
   pie_chart: ^5.1.0
   fl_chart: ^1.0.0
   tuple: ^2.0.2
+  lottie: ^3.3.1
 
 dev_dependencies:
   flutter_test:
@@ -64,4 +65,5 @@ flutter:
     - assets/icon/appBarIcon.png
     - assets/googleIcon.png
     - assets/userIcon.png
+    - assets/lottie/under_construction.json
   uses-material-design: true

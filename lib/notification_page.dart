@@ -1,0 +1,32 @@
+import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
+
+class NotificationPage extends StatelessWidget {
+  const NotificationPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color.fromRGBO(247, 247, 249, 1),
+      appBar: null,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Lottie.asset(
+              'assets/lottie/under_construction.json',
+              width: 150,
+              height: 150,
+              repeat: true,
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              '알림 기능은 추후 개발될 예정입니다',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

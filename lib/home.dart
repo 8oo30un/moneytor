@@ -13,6 +13,7 @@ import 'widgets/card_spending_detail_grid.dart';
 import 'calendar_page.dart';
 import 'home_content.dart'; // <-- Add this import for HomeContent
 import 'graph_page.dart';
+import 'notification_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -527,10 +528,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             },
           ),
           GraphPage(registerCards: registerCards),
-          // NotificationPage(),
-          Container(color: Colors.white),
-          // 4번: 알림 페이지 (임시)
-          Container(color: Colors.white),
+          NotificationPage(),
         ],
       ),
 
