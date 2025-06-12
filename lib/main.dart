@@ -22,9 +22,7 @@ class InitializationApp extends StatelessWidget {
         options: DefaultFirebaseOptions.currentPlatform,
       ),
       builder: (context, snapshot) {
-        print('Firebase init state: ${snapshot.connectionState}');
         if (snapshot.hasError) {
-          print('Firebase init error: ${snapshot.error}');
           return MaterialApp(
             home: Scaffold(
               body: Center(
@@ -34,7 +32,6 @@ class InitializationApp extends StatelessWidget {
           );
         }
         if (snapshot.connectionState == ConnectionState.done) {
-          print('Firebase 초기화 완료');
           return const MyApp();
         }
         return const MaterialApp(

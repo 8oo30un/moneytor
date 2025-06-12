@@ -11,7 +11,7 @@ import 'data/register_card_repository.dart';
 import 'utils/status_utils.dart'; // Make sure this file defines StatusUtils
 import 'home.dart'; // for SortType enum
 
-class HomeContent extends StatelessWidget {
+class HomeContent extends StatefulWidget {
   final String userName;
   final int monthlyGoal;
   final int todaySpending;
@@ -64,27 +64,68 @@ class HomeContent extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  _HomeContentState createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<HomeContent> {
+  late Color cachedStatusColor;
+  RegisterCardModel? cachedSelectedCard;
+
+  @override
+  void initState() {
+    super.initState();
+    // 초기 상태 계산 및 캐싱
+    cachedSelectedCard = widget.selectedCard;
+
+    cachedStatusColor =
+        cachedSelectedCard == null
+            ? Colors.grey
+            : calculateSpendingStatus(
+              monthlyGoal:
+                  cachedSelectedCard!.spendingGoal ?? widget.monthlyGoal,
+              todaySpending: cachedSelectedCard!.totalAmount,
+            ).color;
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // selectedCard가 변경되면 상태를 다시 계산
+    if (widget.selectedCard != oldWidget.selectedCard) {
+      cachedSelectedCard = widget.selectedCard;
+      cachedStatusColor =
+          cachedSelectedCard == null
+              ? Colors.grey
+              : calculateSpendingStatus(
+                monthlyGoal:
+                    cachedSelectedCard!.spendingGoal ?? widget.monthlyGoal,
+                todaySpending: cachedSelectedCard!.totalAmount,
+              ).color;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 1) SpendingStatusDisplay
         SpendingStatusDisplay(
-          userName: userName,
-          monthlyGoal: monthlyGoal,
-          todaySpending: todaySpending,
-          selectedCard: selectedCard,
+          userName: widget.userName,
+          monthlyGoal: widget.monthlyGoal,
+          todaySpending: widget.todaySpending,
+          selectedCard: widget.selectedCard,
         ),
 
         // 2) CardSpendingSummary
         CardSpendingSummary(
-          selectedCard: selectedCard,
-          todaySpending: todaySpending,
-          monthlyGoal: monthlyGoal,
-          statusColor: statusColor,
+          selectedCard: widget.selectedCard,
+          todaySpending: widget.todaySpending,
+          monthlyGoal: widget.monthlyGoal,
+          statusColor: widget.statusColor,
           userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-          registerCards: registerCards,
-          onGoalSaved: onGoalSaved,
+          registerCards: widget.registerCards,
+          onGoalSaved: widget.onGoalSaved,
         ),
 
         // 3) Expanded 영역: 정렬 버튼 + PageView 및 카드 상세 화면
@@ -106,7 +147,7 @@ class HomeContent extends StatelessWidget {
                       // 가격 정렬 버튼
                       OutlinedButton(
                         onPressed: () {
-                          onSortToggle(SortType.price);
+                          widget.onSortToggle(SortType.price);
                         },
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(80, 36),
@@ -117,7 +158,7 @@ class HomeContent extends StatelessWidget {
                             1,
                           ),
                           foregroundColor:
-                              selectedSort == SortType.price
+                              widget.selectedSort == SortType.price
                                   ? Colors.black
                                   : Colors.grey,
                           shape: RoundedRectangleBorder(
@@ -136,14 +177,14 @@ class HomeContent extends StatelessWidget {
                             const Text('가격'),
                             const SizedBox(width: 4),
                             Icon(
-                              selectedSort == SortType.price
-                                  ? (isAscending
+                              widget.selectedSort == SortType.price
+                                  ? (widget.isAscending
                                       ? Icons.arrow_upward
                                       : Icons.arrow_downward)
                                   : Icons.arrow_downward,
                               size: 18,
                               color:
-                                  selectedSort == SortType.price
+                                  widget.selectedSort == SortType.price
                                       ? Colors.black
                                       : Colors.grey,
                             ),
@@ -156,7 +197,7 @@ class HomeContent extends StatelessWidget {
                       // 날짜 정렬 버튼
                       OutlinedButton(
                         onPressed: () {
-                          onSortToggle(SortType.date);
+                          widget.onSortToggle(SortType.date);
                         },
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(80, 36),
@@ -167,7 +208,7 @@ class HomeContent extends StatelessWidget {
                             1,
                           ),
                           foregroundColor:
-                              selectedSort == SortType.date
+                              widget.selectedSort == SortType.date
                                   ? Colors.black
                                   : Colors.grey,
                           shape: RoundedRectangleBorder(
@@ -186,14 +227,14 @@ class HomeContent extends StatelessWidget {
                             const Text('날짜'),
                             const SizedBox(width: 4),
                             Icon(
-                              selectedSort == SortType.date
-                                  ? (isAscending
+                              widget.selectedSort == SortType.date
+                                  ? (widget.isAscending
                                       ? Icons.arrow_upward
                                       : Icons.arrow_downward)
                                   : Icons.arrow_downward,
                               size: 18,
                               color:
-                                  selectedSort == SortType.date
+                                  widget.selectedSort == SortType.date
                                       ? Colors.black
                                       : Colors.grey,
                             ),
@@ -206,7 +247,7 @@ class HomeContent extends StatelessWidget {
                       // 수정 버튼
                       OutlinedButton(
                         onPressed: () {
-                          onEditingChanged(!isEditing);
+                          widget.onEditingChanged(!widget.isEditing);
                         },
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(60, 36),
@@ -227,7 +268,7 @@ class HomeContent extends StatelessWidget {
                             vertical: 8,
                           ),
                         ),
-                        child: Text(isEditing ? '완료' : '수정'),
+                        child: Text(widget.isEditing ? '완료' : '수정'),
                       ),
                     ],
                   ),
@@ -237,7 +278,7 @@ class HomeContent extends StatelessWidget {
                   // PageView (카드 그리드, 카드 상세)
                   Expanded(
                     child: PageView(
-                      controller: pageController,
+                      controller: widget.pageController,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         // 3-1) 카드 그리드 페이지
@@ -270,20 +311,21 @@ class HomeContent extends StatelessWidget {
         mainAxisSpacing: 16,
         childAspectRatio: 1.25,
         children: [
-          ...registerCards.asMap().entries.map((entry) {
+          ...widget.registerCards.asMap().entries.map((entry) {
             int index = entry.key;
             RegisterCardModel card = entry.value;
             return AnimatedBuilder(
-              animation: shakeAnimation,
+              animation: widget.shakeAnimation,
               builder: (context, child) {
                 return Transform.rotate(
-                  angle: isEditing ? shakeAnimation.value * 0.01 : 0,
+                  angle:
+                      widget.isEditing ? widget.shakeAnimation.value * 0.01 : 0,
                   child: child,
                 );
               },
               child: GestureDetector(
                 onTap: () {
-                  onCardSelected(card);
+                  widget.onCardSelected(card);
                 },
                 child: Container(
                   padding: const EdgeInsets.all(12),
@@ -305,27 +347,24 @@ class HomeContent extends StatelessWidget {
                         child: Align(
                           alignment: Alignment.topLeft,
                           child:
-                              isEditing
+                              widget.isEditing
                                   ? Padding(
                                     padding: const EdgeInsets.only(right: 36.0),
                                     child: IntrinsicWidth(
                                       child: TextFormField(
                                         initialValue: card.name,
                                         onChanged: (value) async {
-                                          final updatedCard =
-                                              registerCards[index].copyWith(
-                                                name: value,
-                                              );
-                                          registerCards[index] = updatedCard;
+                                          final updatedCard = widget
+                                              .registerCards[index]
+                                              .copyWith(name: value);
+                                          widget.registerCards[index] =
+                                              updatedCard;
                                           try {
-                                            await registerCardRepo
+                                            await widget.registerCardRepo
                                                 .updateRegisterCard(
                                                   updatedCard,
                                                 );
-                                            print('✅ 카드 이름 업데이트 완료');
-                                          } catch (e) {
-                                            print('🔥 카드 이름 업데이트 실패: $e');
-                                          }
+                                          } catch (e) {}
                                         },
                                         decoration: const InputDecoration(
                                           isDense: true,
@@ -381,12 +420,12 @@ class HomeContent extends StatelessWidget {
                                   ),
                         ),
                       ),
-                      if (isEditing)
+                      if (widget.isEditing)
                         Positioned(
                           top: -5,
                           right: -5,
                           child: GestureDetector(
-                            onTap: () => onCardDeleted(index),
+                            onTap: () => widget.onCardDeleted(index),
                             child: Container(
                               width: 20,
                               height: 20,
@@ -409,7 +448,7 @@ class HomeContent extends StatelessWidget {
             );
           }).toList(),
           GestureDetector(
-            onTap: onShowAddCategoryDialog,
+            onTap: widget.onShowAddCategoryDialog,
             child: Container(
               decoration: BoxDecoration(
                 color: const Color.fromRGBO(247, 247, 249, 1),
@@ -426,7 +465,7 @@ class HomeContent extends StatelessWidget {
   }
 
   Widget _buildCardDetail(BuildContext context) {
-    if (selectedCard == null) {
+    if (widget.selectedCard == null) {
       return Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -438,9 +477,9 @@ class HomeContent extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color:
-            selectedCard!.spendingGoal == null
+            widget.selectedCard!.spendingGoal == null
                 ? const Color.fromRGBO(247, 247, 249, 1)
-                : statusColor,
+                : widget.statusColor,
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(0),
@@ -455,13 +494,13 @@ class HomeContent extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () {
-                    onBackToCardGrid(0); // 상위에서 구현해서 넘겨줘야 함
+                    widget.onBackToCardGrid(0); // 상위에서 구현해서 넘겨줘야 함
                   },
                 ),
                 Expanded(
                   child: Center(
                     child: Text(
-                      selectedCard?.name ?? '선택된 카드 없음',
+                      widget.selectedCard?.name ?? '선택된 카드 없음',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -471,26 +510,26 @@ class HomeContent extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.add),
-                  onPressed: onAddExpense,
+                  onPressed: widget.onAddExpense,
                 ),
               ],
             ),
             const SizedBox(height: 12),
 
             // 지출 리스트
-            if (selectedCard!.expenses.isNotEmpty)
-              ...selectedCard!.expenses.asMap().entries.map((entry) {
+            if (widget.selectedCard!.expenses.isNotEmpty)
+              ...widget.selectedCard!.expenses.asMap().entries.map((entry) {
                 final index = entry.key;
                 final expense = entry.value;
                 final controller = TextEditingController(text: expense['name']);
 
                 return ListTile(
                   title:
-                      isEditing
+                      widget.isEditing
                           ? TextFormField(
                             controller: controller,
                             onChanged: (newName) {
-                              onExpenseNameChanged(index, newName);
+                              widget.onExpenseNameChanged(index, newName);
                             },
                             decoration: const InputDecoration(
                               border: UnderlineInputBorder(),
@@ -511,7 +550,7 @@ class HomeContent extends StatelessWidget {
                                 DateTime.now(),
                           ),
                         ),
-                      if (isEditing)
+                      if (widget.isEditing)
                         IconButton(
                           icon: const Icon(
                             Icons.close,
@@ -519,7 +558,7 @@ class HomeContent extends StatelessWidget {
                             color: Colors.red,
                           ),
                           onPressed: () {
-                            onExpenseDeleted(index);
+                            widget.onExpenseDeleted(index);
                           },
                         ),
                     ],
@@ -529,8 +568,8 @@ class HomeContent extends StatelessWidget {
 
             // 카드 상세 그리드
             CardSpendingDetailGrid(
-              card: selectedCard!,
-              statusColor: statusColor,
+              card: widget.selectedCard!,
+              statusColor: widget.statusColor,
             ),
           ],
         ),

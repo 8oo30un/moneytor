@@ -57,10 +57,6 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
       _goalController.text = result.goal.toString();
       isEditingGoal = true;
     });
-
-    print(
-      '📊 상태 계산됨 ➜ goal: ${result.goal}, spending: ${result.spending}, status: ${result.status}',
-    );
   }
 
   @override
@@ -137,9 +133,6 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                             final newStatus = calculateSpendingStatus(
                               monthlyGoal: goal,
                               todaySpending: updatedCard.totalAmount,
-                            );
-                            print(
-                              '📤 onGoalSaved 호출됨 - updatedCard.spendingGoal: ${updatedCard.spendingGoal}',
                             );
 
                             widget.onGoalSaved(updatedCard);

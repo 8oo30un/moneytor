@@ -23,6 +23,8 @@ class HomePage extends StatefulWidget {
 enum SortType { price, date }
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  int monthlyGoal = 0;
+  int todaySpending = 0;
   late AnimationController _shakeController;
 
   int _selectedIndex = 2; // 홈이 기본 선택된 탭
@@ -34,8 +36,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool isEditing = false;
   String userName = '';
   String? photoUrl;
-  int monthlyGoal = 1000000;
-  int todaySpending = 20000;
   String spendingStatus = '절약'; // 절약, 평균, 과소비 중 하나
   Color statusColor = Colors.green; // 절약: 초록, 평균: 파랑, 과소비: 빨강
 
@@ -70,6 +70,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       monthlyGoal: monthlyGoal,
       todaySpending: todaySpending,
     );
+
     spendingStatus = status.status;
     statusColor = status.color;
 
@@ -101,6 +102,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         registerCards.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
       });
       print('Firestore 등록카드 로드 완료, 개수: ${cards.length}');
+      _calculateStatus();
     } catch (e) {
       print('Firestore 등록카드 로드 실패: $e');
     }
@@ -111,7 +113,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       // 캘린더 페이지로 이동
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => CalendarPage()),
+        MaterialPageRoute(
+          builder:
+              (context) => CalendarPage(
+                registerCards: registerCards,
+                monthlyGoal: monthlyGoal,
+              ),
+        ),
       );
     } else {
       setState(() {
@@ -368,7 +376,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           // ListPage(),
           // 0번: 리스트 페이지 (임시 빈 컨테이너 등)
           Container(color: Colors.white), // 리스트 페이지 자리
-          CalendarPage(),
+          CalendarPage(registerCards: registerCards, monthlyGoal: monthlyGoal),
           HomeContent(
             registerCardRepo: _registerCardRepo,
             userName: userName,
