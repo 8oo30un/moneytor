@@ -251,90 +251,168 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                         padding: EdgeInsets.only(
                           bottom: MediaQuery.of(context).viewInsets.bottom,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Wrap(
-                            children: [
-                              Text(
-                                isCardMode
-                                    ? '한달 카테고리 목표 지출 설정'
-                                    : '한달 전체 목표 지출 설정',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: SingleChildScrollView(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12.0,
                               ),
-                              const SizedBox(height: 30),
-                              TextField(
-                                controller: _goalController,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                ),
+                              child: Column(
+                                children: [
+                                  Center(
+                                    child: Text(
+                                      isCardMode
+                                          ? '한달 카테고리 목표 지출 설정'
+                                          : '한달 전체 목표 지출 설정',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                        letterSpacing: 0.5,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 30),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 4,
+                                        child: TextField(
+                                          controller: _goalController,
+                                          keyboardType: TextInputType.number,
+                                          decoration: InputDecoration(
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            filled: true,
+                                            fillColor: const Color.fromRGBO(
+                                              247,
+                                              247,
+                                              249,
+                                              1,
+                                            ),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 14,
+                                                ),
+                                            hintText: '목표 지출을 입력하세요',
+                                            hintStyle: TextStyle(
+                                              color: Colors.grey.shade500,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 24),
+                                      Expanded(
+                                        flex: 1,
+                                        child: ElevatedButton(
+                                          onPressed: () async {
+                                            final int? newGoal = int.tryParse(
+                                              _goalController.text,
+                                            );
+                                            print('🛠️ 입력된 목표 지출 값: $newGoal');
+                                            print('🛠️ 선택된 카드 모드: $isCardMode');
+                                            print(
+                                              '🛠️ 선택된 카드: ${widget.selectedCard?.name}',
+                                            );
+                                            final appState =
+                                                Provider.of<AppState>(
+                                                  context,
+                                                  listen: false,
+                                                );
+                                            if (newGoal != null &&
+                                                newGoal >= 0) {
+                                              if (isCardMode &&
+                                                  widget.selectedCard != null) {
+                                                final updatedCard = widget
+                                                    .selectedCard!
+                                                    .copyWith(
+                                                      spendingGoal: newGoal,
+                                                    );
+                                                await appState.updateCard(
+                                                  updatedCard,
+                                                  context,
+                                                );
+                                                print(
+                                                  '📝 업데이트된 카드 목표 지출: ${updatedCard.spendingGoal}',
+                                                );
+                                                await appState.selectCard(
+                                                  updatedCard,
+                                                );
+                                              } else {
+                                                appState.setMonthlyGoal(
+                                                  newGoal,
+                                                );
+                                                print(
+                                                  '📌 전체 monthlyGoal 설정됨: $newGoal',
+                                                );
+                                                if (widget
+                                                        .onDefaultGoalChanged !=
+                                                    null) {
+                                                  widget.onDefaultGoalChanged!(
+                                                    newGoal,
+                                                  );
+                                                }
+                                              }
+                                              setState(() {
+                                                _goalController.text =
+                                                    newGoal.toString();
+                                                isEditingGoal = false;
+                                              });
+                                              Navigator.pop(context);
+                                            }
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            minimumSize: const Size(60, 48),
+                                            backgroundColor:
+                                                const Color.fromRGBO(
+                                                  247,
+                                                  247,
+                                                  249,
+                                                  1,
+                                                ),
+                                            foregroundColor: Colors.black87,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            elevation: 0,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 12,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            '등록',
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+                                ],
                               ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  final int? newGoal = int.tryParse(
-                                    _goalController.text,
-                                  );
-                                  print('🛠️ 입력된 목표 지출 값: $newGoal');
-                                  print('🛠️ 선택된 카드 모드: $isCardMode');
-                                  print(
-                                    '🛠️ 선택된 카드: ${widget.selectedCard?.name}',
-                                  );
-                                  final appState = Provider.of<AppState>(
-                                    context,
-                                    listen: false,
-                                  );
-                                  if (newGoal != null && newGoal >= 0) {
-                                    if (isCardMode &&
-                                        widget.selectedCard != null) {
-                                      final updatedCard = widget.selectedCard!
-                                          .copyWith(spendingGoal: newGoal);
-                                      await appState.updateCard(
-                                        updatedCard,
-                                        context,
-                                      );
-                                      print(
-                                        '📝 업데이트된 카드 목표 지출: ${updatedCard.spendingGoal}',
-                                      );
-                                      await appState.selectCard(updatedCard);
-                                    } else {
-                                      appState.setMonthlyGoal(newGoal);
-                                      print('📌 전체 monthlyGoal 설정됨: $newGoal');
-                                      if (widget.onDefaultGoalChanged != null) {
-                                        widget.onDefaultGoalChanged!(newGoal);
-                                      }
-                                    }
-                                    setState(() {
-                                      _goalController.text = newGoal.toString();
-                                      isEditingGoal = false;
-                                    });
-                                    Navigator.pop(context);
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(60, 36),
-                                  backgroundColor: const Color.fromRGBO(
-                                    247,
-                                    247,
-                                    249,
-                                    1,
-                                  ),
-                                  foregroundColor: Colors.black,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 8,
-                                  ),
-                                ),
-                                child: const Text('등록'),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       );
