@@ -672,21 +672,4 @@ class _HomeContentState extends State<HomeContent> {
       ),
     );
   }
-
-  /// Call this to set whether we are registering the total goal.
-  void setIsRegisteringTotalGoal(bool value) {
-    setState(() {
-      _isRegisteringTotalGoal = value;
-    });
-  }
-
-  /// Externally callable: start registering total goal
-  void startRegisteringTotalGoal() {
-    setIsRegisteringTotalGoal(true);
-  }
-
-  /// Externally callable: stop registering total goal
-  void stopRegisteringTotalGoal() {
-    setIsRegisteringTotalGoal(false);
-  }
 }

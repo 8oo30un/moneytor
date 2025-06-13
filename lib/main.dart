@@ -5,11 +5,18 @@ import 'package:moneytor/home.dart';
 import 'login.dart';
 import 'firebase_options.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:provider/provider.dart';
+import 'state/app_state.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ko', null);
-  runApp(const InitializationApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AppState(),
+      child: const InitializationApp(),
+    ),
+  );
 }
 
 class InitializationApp extends StatelessWidget {
