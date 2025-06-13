@@ -46,7 +46,7 @@ SpendingStatus calculateSpendingStatus({
     );
   } else {
     return SpendingStatus(
-      status: '적정',
+      status: '평균',
       color: Color.fromRGBO(152, 219, 204, 1),
       spending: todaySpending,
     );

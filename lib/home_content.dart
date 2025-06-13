@@ -2,13 +2,13 @@
 import 'package:flutter/material.dart';
 import 'model/register_card_model.dart';
 import 'widgets/spending_status_display.dart';
-import 'widgets/card_spending_summary.dart';
+import 'widgets/card_spending_summary.dart' as summary;
 import 'widgets/card_spending_detail_grid.dart';
-import 'utils/spending_calculator.dart';
+import 'utils/spending_calculator.dart' as calc;
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'data/register_card_repository.dart';
-import 'utils/status_utils.dart'; // Make sure this file defines StatusUtils
 import 'home.dart'; // for SortType enum
 
 class HomeContent extends StatefulWidget {
@@ -68,23 +68,23 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
+  late RegisterCardRepository _registerCardRepo;
+
+  int monthlyGoal = 0;
+  int todaySpending = 0;
   late Color cachedStatusColor;
   RegisterCardModel? cachedSelectedCard;
+  bool _isRegisteringTotalGoal = false;
+  int defaultGoal = 0;
 
   @override
   void initState() {
     super.initState();
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    _registerCardRepo = RegisterCardRepository(userId: userId);
     // 초기 상태 계산 및 캐싱
     cachedSelectedCard = widget.selectedCard;
-
-    cachedStatusColor =
-        cachedSelectedCard == null ||
-                (cachedSelectedCard!.spendingGoal ?? 0) == 0
-            ? const Color.fromRGBO(247, 247, 249, 1) // 미설정 색상
-            : calculateSpendingStatus(
-              monthlyGoal: cachedSelectedCard!.spendingGoal!,
-              todaySpending: cachedSelectedCard!.totalAmount,
-            ).color;
+    _loadDefaultGoal();
   }
 
   @override
@@ -93,14 +93,67 @@ class _HomeContentState extends State<HomeContent> {
     // selectedCard가 변경되면 상태를 다시 계산
     if (widget.selectedCard != oldWidget.selectedCard) {
       cachedSelectedCard = widget.selectedCard;
+      _calculateStatus();
+    }
+  }
+
+  void _calculateStatus() {
+    final monthlyGoal = cachedSelectedCard?.spendingGoal ?? defaultGoal;
+    final todaySpending =
+        cachedSelectedCard?.totalAmount ??
+        widget.registerCards.fold<int>(
+          0,
+          (sum, card) => sum + card.totalAmount,
+        );
+
+    print('[DEBUG] _calculateStatus 호출!!!!!!');
+    print('[DEBUG] monthlyGoal: $monthlyGoal');
+    print('[DEBUG] todaySpending: $todaySpending');
+    print('[DEBUG] cachedSelectedCard: $cachedSelectedCard');
+
+    setState(() {
+      this.monthlyGoal = monthlyGoal;
+
       cachedStatusColor =
-          cachedSelectedCard == null ||
-                  (cachedSelectedCard!.spendingGoal ?? 0) == 0
+          (monthlyGoal == 0)
               ? const Color.fromRGBO(247, 247, 249, 1)
-              : calculateSpendingStatus(
-                monthlyGoal: cachedSelectedCard!.spendingGoal!,
-                todaySpending: cachedSelectedCard!.totalAmount,
-              ).color;
+              : calc
+                  .calculateSpendingStatus(
+                    monthlyGoal: monthlyGoal,
+                    todaySpending: todaySpending,
+                  )
+                  .color;
+
+      print('[DEBUG] setState 내부 monthlyGoal: $monthlyGoal');
+    });
+  }
+
+  Future<void> _loadDefaultGoal() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    if (doc.exists) {
+      final data = doc.data();
+      setState(() {
+        defaultGoal = data?['defaultGoal'] ?? 0;
+      });
+      print('[DEBUG] defaultGoal 업데이트 완료 🔥: $defaultGoal');
+      _calculateStatus(); // 상태가 바뀐 후 호출
+    }
+  }
+
+  Future<void> _loadUserGoals() async {
+    try {
+      final goals = await _registerCardRepo.fetchUserGoals();
+      setState(() {
+        monthlyGoal = goals['monthlyGoal']!;
+        todaySpending = goals['todaySpending']!;
+      });
+      print('[DEBUG] 🔄 defaultGoal 다시 불러오기 완료: $monthlyGoal, $todaySpending');
+    } catch (e) {
+      print('[ERROR] 유저 목표 불러오기 실패: $e');
     }
   }
 
@@ -112,20 +165,34 @@ class _HomeContentState extends State<HomeContent> {
         // 1) SpendingStatusDisplay
         SpendingStatusDisplay(
           userName: widget.userName,
-          monthlyGoal: widget.monthlyGoal,
-          todaySpending: widget.todaySpending,
-          selectedCard: widget.selectedCard,
+          monthlyGoal: monthlyGoal,
+          todaySpending: todaySpending,
+          selectedCard: _isRegisteringTotalGoal ? null : widget.selectedCard,
         ),
 
         // 2) CardSpendingSummary
-        CardSpendingSummary(
-          selectedCard: widget.selectedCard,
-          todaySpending: widget.todaySpending,
+        summary.CardSpendingSummary(
+          selectedCard: cachedSelectedCard,
+          todaySpending: todaySpending,
           monthlyGoal: widget.monthlyGoal,
           statusColor: widget.statusColor,
           userId: FirebaseAuth.instance.currentUser?.uid ?? '',
           registerCards: widget.registerCards,
-          onGoalSaved: widget.onGoalSaved,
+          onGoalSaved: (RegisterCardModel? card) async {
+            if (card != null) {
+              setState(() {
+                cachedSelectedCard = card;
+              });
+            }
+            await _loadUserGoals(); // Firestore에서 defaultGoal과 카드 총합 다시 불러오기
+            _calculateStatus(); // 최신 값으로 상태 다시 계산
+          },
+          onDefaultGoalChanged: (updatedGoal) {
+            setState(() {
+              defaultGoal = updatedGoal;
+            });
+            _calculateStatus();
+          },
         ),
 
         // 3) Expanded 영역: 정렬 버튼 + PageView 및 카드 상세 화면
@@ -333,10 +400,12 @@ class _HomeContentState extends State<HomeContent> {
                     color:
                         (card.spendingGoal ?? 0) == 0
                             ? const Color.fromRGBO(247, 247, 249, 1)
-                            : calculateSpendingStatus(
-                              monthlyGoal: card.spendingGoal!,
-                              todaySpending: card.totalAmount,
-                            ).color,
+                            : calc
+                                .calculateSpendingStatus(
+                                  monthlyGoal: card.spendingGoal!,
+                                  todaySpending: card.totalAmount,
+                                )
+                                .color,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   alignment: Alignment.topLeft,
@@ -479,7 +548,7 @@ class _HomeContentState extends State<HomeContent> {
         color:
             (widget.selectedCard!.spendingGoal ?? 0) == 0
                 ? const Color.fromRGBO(247, 247, 249, 1)
-                : widget.statusColor,
+                : cachedStatusColor,
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(0),
@@ -569,14 +638,28 @@ class _HomeContentState extends State<HomeContent> {
             // 카드 상세 그리드
             CardSpendingDetailGrid(
               card: widget.selectedCard!,
-              statusColor:
-                  (widget.selectedCard!.spendingGoal ?? 0) == 0
-                      ? const Color.fromRGBO(247, 247, 249, 1)
-                      : widget.statusColor,
+              statusColor: cachedStatusColor,
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Call this to set whether we are registering the total goal.
+  void setIsRegisteringTotalGoal(bool value) {
+    setState(() {
+      _isRegisteringTotalGoal = value;
+    });
+  }
+
+  /// Externally callable: start registering total goal
+  void startRegisteringTotalGoal() {
+    setIsRegisteringTotalGoal(true);
+  }
+
+  /// Externally callable: stop registering total goal
+  void stopRegisteringTotalGoal() {
+    setIsRegisteringTotalGoal(false);
   }
 }

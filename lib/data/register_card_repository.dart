@@ -1,4 +1,3 @@
-// lib/data/register_card_repository.dart
 import '../model/register_card_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -32,5 +31,54 @@ class RegisterCardRepository {
 
   Future<void> deleteRegisterCard(String id) async {
     await firestore.collection(collectionPath).doc(id).delete();
+  }
+
+  Future<void> updateDefaultGoal(int goal) async {
+    await firestore.collection('users').doc(userId).set({
+      'defaultGoal': goal,
+    }, SetOptions(merge: true));
+  }
+
+  Future<int> getDefaultGoal() async {
+    final doc = await firestore.collection('users').doc(userId).get();
+    if (doc.exists && doc.data()!.containsKey('defaultGoal')) {
+      return doc.data()!['defaultGoal'] as int;
+    } else {
+      return 0; // 또는 기본값
+    }
+  }
+
+  Future<Map<String, int>> fetchUserGoals() async {
+    print('Fetching user goals for userId: $userId');
+    int totalSpending = 0;
+    final doc = await firestore.collection('users').doc(userId).get();
+
+    if (doc.exists) {
+      final data = doc.data();
+      final int monthlyGoal = data?['defaultGoal'] ?? 0;
+
+      // register_cards 하위 컬렉션 불러오기
+      final cardsSnapshot =
+          await firestore
+              .collection('users')
+              .doc(userId)
+              .collection('register_cards')
+              .get();
+
+      for (final cardDoc in cardsSnapshot.docs) {
+        final cardData = cardDoc.data();
+        if (cardData.containsKey('totalAmount')) {
+          totalSpending += (cardData['totalAmount'] as int? ?? 0);
+        }
+      }
+
+      print(
+        'Fetched monthlyGoal: $monthlyGoal, calculated todaySpending: $totalSpending',
+      );
+      return {'monthlyGoal': monthlyGoal, 'todaySpending': totalSpending};
+    }
+
+    print('No user goals found, returning defaults');
+    return {'monthlyGoal': 0, 'todaySpending': 0};
   }
 }

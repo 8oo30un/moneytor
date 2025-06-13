@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,8 +14,9 @@ class CardSpendingSummary extends StatefulWidget {
   final int monthlyGoal;
   final Color statusColor;
   final String userId;
-  final Function(RegisterCardModel updatedCard) onGoalSaved;
+  final Function(RegisterCardModel? updatedCard) onGoalSaved;
   final List<RegisterCardModel> registerCards;
+  final Function(int updatedDefaultGoal)? onDefaultGoalChanged;
 
   const CardSpendingSummary({
     super.key,
@@ -25,6 +27,7 @@ class CardSpendingSummary extends StatefulWidget {
     required this.userId,
     required this.onGoalSaved,
     required this.registerCards,
+    this.onDefaultGoalChanged,
   });
 
   @override
@@ -35,23 +38,58 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
   bool isEditingGoal = false;
   final TextEditingController _goalController = TextEditingController();
 
+  Future<void> _loadDefaultGoal() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get();
+      if (doc.exists) {
+        final data = doc.data();
+        final int defaultGoal = data?['defaultGoal'] ?? 0;
+        setState(() {
+          _goalController.text = defaultGoal.toString();
+        });
+        if (widget.onDefaultGoalChanged != null) {
+          widget.onDefaultGoalChanged!(defaultGoal);
+        }
+        print('[DEBUG] Firestore에서 불러온 defaultGoal: $defaultGoal');
+      }
+    } catch (e) {
+      print('[ERROR] defaultGoal 불러오기 실패: $e');
+    }
+  }
+
   Future<void> _saveSpendingGoal(int goal) async {
-    final updatedCard = widget.selectedCard!.copyWith(spendingGoal: goal);
+    final updatedCard = widget.selectedCard!.copyWith(
+      spendingGoal: goal,
+      totalAmount: widget.selectedCard!.totalAmount,
+    );
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
     final repo = RegisterCardRepository(userId: userId);
     await repo.updateRegisterCard(updatedCard);
     widget.onGoalSaved(updatedCard);
+    setState(() {
+      _goalController.text = goal.toString();
+      isEditingGoal = false;
+    });
   }
 
-  void _calculateStatus() {
-    final result = calculateStatusFromCard(
+  Future<void> _calculateStatus() async {
+    final result = await calculateStatusFromCard(
       selectedCard: widget.selectedCard,
       defaultGoal: widget.monthlyGoal,
       defaultSpending: widget.todaySpending,
       allCards: widget.registerCards,
     );
+
+    print('Calculated monthlyGoal: ${result.goal}');
 
     setState(() {
       _goalController.text = result.goal.toString();
@@ -235,15 +273,136 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                 ),
               ],
             ),
-            if (widget.selectedCard != null)
-              Positioned(
-                top: -10,
-                right: -6,
-                child: IconButton(
-                  icon: const Icon(Icons.edit, size: 18),
-                  onPressed: _calculateStatus,
-                ),
+            Positioned(
+              top: -10,
+              right: -6,
+              child: IconButton(
+                icon: const Icon(Icons.edit, size: 18),
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                    ),
+                    builder: (_) {
+                      final isCardMode = widget.selectedCard != null;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).viewInsets.bottom,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Wrap(
+                            children: [
+                              Text(
+                                isCardMode
+                                    ? '한달 카테고리 목표 지출 설정'
+                                    : '한달 전체 목표 지출 설정',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: _goalController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: '목표 지출 (원)',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  final int? newGoal = int.tryParse(
+                                    _goalController.text,
+                                  );
+                                  // Debug print statements for logging
+                                  print('[DEBUG] newGoal: $newGoal');
+                                  print(
+                                    '[DEBUG] selectedCard is null: ${widget.selectedCard == null}',
+                                  );
+                                  if (newGoal != null && newGoal >= 0) {
+                                    if (widget.selectedCard == null) {
+                                      final userId =
+                                          FirebaseAuth
+                                              .instance
+                                              .currentUser
+                                              ?.uid;
+                                      if (userId != null) {
+                                        final repo = RegisterCardRepository(
+                                          userId: userId,
+                                        );
+                                        await repo.updateDefaultGoal(newGoal);
+
+                                        await _loadDefaultGoal(); // 업데이트 후 최신 값 다시 불러오기
+                                        print(
+                                          '[DEBUG] 전체 목표 지출 수정 완료, onGoalSaved(null) 호출 전',
+                                        );
+
+                                        widget.onGoalSaved(null);
+                                        print(
+                                          '[DEBUG] onGoalSaved(null) 호출 완료',
+                                        );
+                                        setState(() {
+                                          _goalController.text =
+                                              newGoal.toString();
+                                          print(
+                                            '[DEBUG] setState 완료: _goalController.text=${_goalController.text}, isEditingGoal=$isEditingGoal',
+                                          );
+                                        });
+                                        Navigator.pop(context);
+                                      }
+                                    } else {
+                                      setState(() {
+                                        _goalController.text =
+                                            newGoal.toString();
+                                        isEditingGoal = true;
+                                      });
+
+                                      final updatedCard = widget.selectedCard!
+                                          .copyWith(spendingGoal: newGoal);
+                                      print(
+                                        '[DEBUG] updatedCard: $updatedCard',
+                                      );
+                                      widget.onGoalSaved(updatedCard);
+                                      Navigator.pop(context);
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(60, 36),
+                                  backgroundColor: const Color.fromRGBO(
+                                    247,
+                                    247,
+                                    249,
+                                    1,
+                                  ),
+                                  foregroundColor: Colors.black,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
+                                ),
+                                child: const Text('등록'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
+            ),
           ],
         ),
       ),

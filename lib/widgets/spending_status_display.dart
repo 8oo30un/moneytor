@@ -18,10 +18,11 @@ class SpendingStatusDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int goal = selectedCard?.spendingGoal ?? monthlyGoal;
+    final int? goal =
+        selectedCard?.spendingGoal ?? (monthlyGoal == 0 ? null : monthlyGoal);
     final int spending = selectedCard?.totalAmount ?? todaySpending;
 
-    if (goal == 0) {
+    if (goal == null) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         child: Text(

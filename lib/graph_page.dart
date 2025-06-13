@@ -86,7 +86,7 @@ class _GraphPageState extends State<GraphPage> {
             barRods: [
               BarChartRodData(
                 toY: value / 10000,
-                color: Colors.blue,
+                color: Colors.blue[300],
                 width: 16,
                 borderRadius: BorderRadius.circular(4),
                 rodStackItems: [],
@@ -97,8 +97,8 @@ class _GraphPageState extends State<GraphPage> {
     return Tuple2(groups, sortedKeys);
   }
 
-  String _getStatusForCard(RegisterCardModel card) {
-    final result = calculateStatusFromCard(selectedCard: card);
+  Future<String> _getStatusForCard(RegisterCardModel card) async {
+    final result = await calculateStatusFromCard(selectedCard: card);
     return result.status;
   }
 
@@ -158,7 +158,6 @@ class _GraphPageState extends State<GraphPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 목표 지출 상태 말풍선
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: Container(
@@ -183,7 +182,6 @@ class _GraphPageState extends State<GraphPage> {
                                     color: Colors.black87,
                                   ),
                                 ),
-                                // 말풍선 꼬리
                                 Positioned(
                                   bottom: -22,
                                   left: 6,
@@ -332,44 +330,51 @@ class _GraphPageState extends State<GraphPage> {
                                 ),
                           );
 
-                          final statusResult = calculateStatusFromCard(
-                            selectedCard: card,
-                          );
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: statusResult.color.withOpacity(0.7),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 10,
-                                horizontal: 12,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      entry.key,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w500,
+                          return FutureBuilder<StatusResult>(
+                            future: calculateStatusFromCard(selectedCard: card),
+                            builder: (context, snapshot) {
+                              final color =
+                                  snapshot.hasData
+                                      ? snapshot.data!.color.withOpacity(0.7)
+                                      : Colors.grey.withOpacity(0.3);
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6.0,
+                                ),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                    horizontal: 12,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          entry.key,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      Text(
+                                        '${percentage.toStringAsFixed(1)}%',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    '${percentage.toStringAsFixed(1)}%',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                                ),
+                              );
+                            },
                           );
                         }),
                       ],
@@ -380,5 +385,3 @@ class _GraphPageState extends State<GraphPage> {
     );
   }
 }
-
-// TODO: Fetch registerCards from Firestore or other backend and pass to GraphPage.

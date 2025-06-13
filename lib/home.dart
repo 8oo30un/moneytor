@@ -15,6 +15,7 @@ import 'home_content.dart'; // <-- Add this import for HomeContent
 import 'graph_page.dart';
 import 'notification_page.dart';
 import 'user_page.dart';
+import 'list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -54,10 +55,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: _selectedIndex);
-
-    registerCards.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
-
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       userName = user.displayName ?? '';
@@ -67,13 +64,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _registerCardRepo = RegisterCardRepository(userId: '');
     }
 
+    _pageController = PageController(initialPage: _selectedIndex);
+    registerCards.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+
     String? selectedCardName = selectedCard?.name;
 
     final status = calculateSpendingStatus(
       monthlyGoal: monthlyGoal,
       todaySpending: todaySpending,
     );
-
     spendingStatus = status.status;
     statusColor = status.color;
 
@@ -81,14 +80,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     )..repeat(reverse: true);
-
     _shakeAnimation = Tween<double>(begin: 0.0, end: 2.0).animate(
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
     );
     _shakeController.stop();
 
+    // Load user goals, then status
+    _loadUserGoals().then((_) {
+      _calculateStatus();
+    });
     _loadRegisterCards();
-    _calculateStatus();
+  }
+
+  Future<void> _loadUserGoals() async {
+    print('🔵 _loadUserGoals: Loading user goals...');
+    try {
+      final goals = await _registerCardRepo.fetchUserGoals();
+      // Fetch defaultGoal from Firestore and assign to monthlyGoal
+      setState(() {
+        monthlyGoal = goals['defaultGoal'] ?? goals['monthlyGoal'] ?? 0;
+      });
+      await _calculateStatus();
+    } catch (e) {}
   }
 
   @override
@@ -100,12 +113,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _loadRegisterCards() async {
     try {
       final cards = await _registerCardRepo.fetchRegisterCards();
+      // Calculate the sum of totalAmount from all registerCards
+      int totalSpending = cards.fold<int>(
+        0,
+        (sum, card) => sum + (card.totalAmount ?? 0),
+      );
       setState(() {
         registerCards = cards;
         registerCards.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+        todaySpending = totalSpending;
       });
       print('Firestore 등록카드 로드 완료, 개수: ${cards.length}');
-      _calculateStatus();
+      print('✅ todaySpending calculated from registerCards: $todaySpending');
+      await _calculateStatus();
     } catch (e) {
       print('Firestore 등록카드 로드 실패: $e');
     }
@@ -176,8 +196,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  void _calculateStatus() {
-    final result = calculateStatusFromCard(
+  Future<void> _calculateStatus() async {
+    final result = await calculateStatusFromCard(
       selectedCard: selectedCard,
       allCards: registerCards, // ✅ 이걸 꼭 전달해야 함
     );
@@ -382,9 +402,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           });
         },
         children: [
-          // ListPage(),
-          // 0번: 리스트 페이지 (임시 빈 컨테이너 등)
-          Container(color: Colors.white), // 리스트 페이지 자리
+          ListPage(),
           CalendarPage(registerCards: registerCards, monthlyGoal: monthlyGoal),
           HomeContent(
             registerCardRepo: _registerCardRepo,
