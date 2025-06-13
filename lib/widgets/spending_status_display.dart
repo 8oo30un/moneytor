@@ -27,7 +27,7 @@ class SpendingStatusDisplay extends StatelessWidget {
     final int? goal =
         selectedCard?.spendingGoal ?? (monthlyGoal == 0 ? null : monthlyGoal);
 
-    if (goal == null) {
+    if (goal == null || goal == 0) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         child: Text(

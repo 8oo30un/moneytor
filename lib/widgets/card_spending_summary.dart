@@ -108,6 +108,9 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
       monthlyGoal: goal ?? widget.monthlyGoal,
       todaySpending: card?.totalAmount ?? widget.todaySpending,
     );
+    print(
+      '❤️ Status 계산됨 → goal: ${goal ?? widget.monthlyGoal}, spending: ${card?.totalAmount ?? widget.todaySpending}, status: ${status.status}, color: ${status.color}',
+    );
 
     final Color backgroundColor =
         goal == null ? const Color.fromRGBO(247, 247, 249, 1) : status.color;
@@ -137,11 +140,11 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '목표 지출을 설정해주세요',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
+              // const Text(
+              //   '목표 지출을 설정해주세요',
+              //   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              // ),
+              // const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -149,7 +152,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                       controller: _goalController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: '목표 지출 (원)',
+                        labelText: '한달 목표 지출 (원)',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -311,7 +314,6 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                                 controller: _goalController,
                                 keyboardType: TextInputType.number,
                                 decoration: const InputDecoration(
-                                  labelText: '목표 지출 (원)',
                                   border: OutlineInputBorder(),
                                 ),
                               ),
