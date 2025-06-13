@@ -6,6 +6,7 @@ class SpendingStatusDisplay extends StatelessWidget {
   final String userName;
   final int monthlyGoal;
   final int todaySpending;
+  final int totalSpending;
   final RegisterCardModel? selectedCard;
   final List<RegisterCardModel> registerCards;
 
@@ -15,17 +16,27 @@ class SpendingStatusDisplay extends StatelessWidget {
     required this.monthlyGoal,
     required this.todaySpending,
     required this.registerCards,
+    required this.totalSpending,
     this.selectedCard,
   });
 
   @override
   Widget build(BuildContext context) {
-    final int spending = selectedCard?.totalAmount ?? todaySpending;
+    final int currentDay = DateTime.now().day;
+    final int daysInMonth =
+        DateTime(DateTime.now().year, DateTime.now().month + 1, 0).day;
 
-    print('🔥🔥🔥 spending: $spending');
+    final int baseSpending =
+        selectedCard?.totalAmount ??
+        registerCards.fold<int>(0, (sum, card) => sum + card.totalAmount);
+
+    final int estimatedMonthlySpending =
+        (baseSpending / currentDay * daysInMonth).round();
 
     final int? goal =
         selectedCard?.spendingGoal ?? (monthlyGoal == 0 ? null : monthlyGoal);
+    final int? estimatedGoalSpending =
+        goal != null ? (goal / daysInMonth * currentDay).round() : null;
 
     if (goal == null || goal == 0) {
       return const Padding(
@@ -41,10 +52,9 @@ class SpendingStatusDisplay extends StatelessWidget {
       );
     }
 
-    final status = calculateSpendingStatus(
-      monthlyGoal: goal,
-      todaySpending: spending,
-    );
+    final status = calculateSpendingStatus(context);
+
+    print('[DEBUG] status: ${status.status}, color: ${status.color}');
 
     final isAverage = status.status == '평균';
 
@@ -64,7 +74,8 @@ class SpendingStatusDisplay extends StatelessWidget {
                 ),
               ),
               const TextSpan(text: ' 카테고리에서\n'),
-            ],
+            ] else
+              ...[],
             if (isAverage) ...[
               const TextSpan(text: '권장지출만큼 '),
               TextSpan(

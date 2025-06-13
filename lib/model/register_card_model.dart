@@ -1,4 +1,3 @@
-// lib/data/register_card_model.dart
 class RegisterCardModel {
   final String id;
   final String name;
@@ -25,6 +24,16 @@ class RegisterCardModel {
       totalAmount: data['totalAmount'] ?? 0,
       expenses: List<Map<String, dynamic>>.from(data['expenses'] ?? []),
       spendingGoal: data['spendingGoal'],
+    );
+  }
+
+  factory RegisterCardModel.empty() {
+    return RegisterCardModel(
+      id: '',
+      name: '',
+      totalAmount: 0,
+      expenses: [],
+      spendingGoal: 0,
     );
   }
 

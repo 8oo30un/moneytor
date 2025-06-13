@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../model/register_card_model.dart';
+import '../state/app_state.dart';
 
 class CardSpendingDetailGrid extends StatelessWidget {
   final RegisterCardModel card;
@@ -13,12 +15,16 @@ class CardSpendingDetailGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final card = appState.selectedCard;
+    final statusColor = appState.statusColor;
+
     final now = DateTime.now();
     final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
     final currentDay = now.day;
 
-    final goal = card.spendingGoal ?? 0;
-    final total = card.totalAmount;
+    final goal = card?.spendingGoal ?? 0;
+    final total = card?.totalAmount ?? 0;
 
     final goalAverage = (goal / daysInMonth).round();
     final currentAverage = ((total / currentDay)).round();
@@ -30,7 +36,7 @@ class CardSpendingDetailGrid extends StatelessWidget {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.15),
+                color: Colors.white.withOpacity(0),
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.symmetric(
@@ -69,7 +75,7 @@ class CardSpendingDetailGrid extends StatelessWidget {
       child: Container(
         // ✅ 전체 영역 흰 배경 벤토 박스 스타일
         decoration: BoxDecoration(
-          color: statusColor.withOpacity(0.3),
+          color: Colors.white.withOpacity(0.3),
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(12),

@@ -1,9 +1,7 @@
 // lib/home.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'utils/spending_calculator.dart';
 import 'model/register_card_model.dart';
-import 'data/register_card_repository.dart';
 import 'utils/status_utils.dart';
 import 'calendar_page.dart';
 import 'home_content.dart'; // <-- Add this import for HomeContent
@@ -39,24 +37,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   SortType selectedSort = SortType.price;
   bool isAscending = false;
 
-  late final RegisterCardRepository _registerCardRepo;
   late final Animation<double> _shakeAnimation;
 
   @override
   void initState() {
     super.initState();
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      userName = user.displayName ?? '';
-      photoUrl = user.photoURL;
-      _registerCardRepo = RegisterCardRepository(userId: user.uid);
-    } else {
-      _registerCardRepo = RegisterCardRepository(userId: '');
-    }
-
+    // Initialize UI related controllers
     _pageController = PageController(initialPage: _selectedIndex);
-    // registerCards and status now managed by AppState
-
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -65,46 +52,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
     );
     _shakeController.stop();
-
-    // Load user goals, then status
-    _loadUserGoals().then((_) {
-      _calculateStatus();
-    });
-    _loadRegisterCards();
-  }
-
-  Future<void> _loadUserGoals() async {
-    try {
-      final goals = await _registerCardRepo.fetchUserGoals();
-      // Fetch defaultGoal from Firestore and assign to monthlyGoal
-      final appState = Provider.of<AppState>(context, listen: false);
-      appState.setMonthlyGoal(
-        goals['defaultGoal'] ?? goals['monthlyGoal'] ?? 0,
-      );
-      await _calculateStatus();
-    } catch (e) {}
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadRegisterCards() async {
-    try {
-      final cards = await _registerCardRepo.fetchRegisterCards();
-      // Calculate the sum of totalAmount from all registerCards
-      int totalSpending = cards.fold<int>(
-        0,
-        (sum, card) => sum + (card.totalAmount),
-      );
-      final appState = Provider.of<AppState>(context, listen: false);
-      appState.setRegisterCards(cards);
-      appState.setTodaySpending(totalSpending);
-      print('Firestore 등록카드 로드 완료, 개수: ${cards.length}');
-      await _calculateStatus();
-    } catch (e) {}
   }
 
   void _showAddCategoryDialog() {
@@ -127,18 +80,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               child: const Text('취소'),
             ),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: () {
                 if (newCategory.trim().isNotEmpty) {
-                  try {
-                    final newCard = RegisterCardModel(
-                      id: '', // Firestore 자동 생성
-                      name: newCategory.trim(),
-                      totalAmount: 0,
-                      expenses: [],
-                    );
-                    await _registerCardRepo.addRegisterCard(newCard);
-                    await _loadRegisterCards();
-                  } catch (e) {}
+                  final appState = Provider.of<AppState>(
+                    context,
+                    listen: false,
+                  );
+                  final newCard = RegisterCardModel(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    name: newCategory.trim(),
+                    totalAmount: 0,
+                    expenses: [],
+                  );
+                  final newCards = List<RegisterCardModel>.from(
+                    appState.registerCards,
+                  )..add(newCard);
+                  appState.setRegisterCards(newCards);
                 }
                 Navigator.of(context).pop();
               },
@@ -152,16 +109,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Future<void> _calculateStatus() async {
     final appState = Provider.of<AppState>(context, listen: false);
-    final result = await calculateStatusFromCard(
-      selectedCard: appState.selectedCard,
-      allCards: appState.registerCards,
-    );
-    appState.setMonthlyGoal(result.goal);
+
+    if (appState.monthlyGoal == 0) {
+      await appState.loadMonthlyGoalFromFirestore();
+    }
+
+    final result = await calculateStatusFromCard(context);
+
+    // selectedCard가 null일 때 goal을 registerCards 전체 목표로 세팅
+    final int goal =
+        result.goal == 0 && appState.selectedCard == null
+            ? appState
+                .monthlyGoal // appState의 전체 목표 월간 지출 값
+            : result.goal;
+
+    appState.setMonthlyGoal(goal);
     appState.setTodaySpending(result.spending);
     spendingStatus = result.status;
     appState.setStatusColor(result.color);
+
     print(
-      '상태 계산됨 ➜ goal: ${result.goal}, spending: ${result.spending}, status: ${result.status}',
+      '상태 계산됨 ➜ goal: $goal, spending: ${result.spending}, status: ${result.status}',
     );
   }
 
@@ -258,7 +226,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               child: const Text('취소'),
             ),
             TextButton(
-              onPressed: () async {
+              onPressed: () {
                 final appState = Provider.of<AppState>(context, listen: false);
                 if (expenseName.trim().isNotEmpty &&
                     int.tryParse(expensePrice) != null &&
@@ -282,34 +250,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     totalAmount: updatedTotal,
                   );
 
-                  try {
-                    await _registerCardRepo.updateRegisterCard(updatedCard);
-                    appState.selectCard(updatedCard);
-                    final idx = appState.registerCards.indexWhere(
-                      (c) => c.id == updatedCard.id,
+                  appState.selectCard(updatedCard);
+                  final idx = appState.registerCards.indexWhere(
+                    (c) => c.id == updatedCard.id,
+                  );
+                  if (idx != -1) {
+                    final newCards = List<RegisterCardModel>.from(
+                      appState.registerCards,
                     );
-                    if (idx != -1) {
-                      final newCards = List<RegisterCardModel>.from(
-                        appState.registerCards,
-                      );
-                      newCards[idx] = updatedCard;
-                      appState.setRegisterCards(newCards);
-                    }
-                    // Update status color after adding expense
-                    final color =
-                        (updatedCard.spendingGoal ?? 0) == 0
-                            ? const Color.fromRGBO(247, 247, 249, 1)
-                            : calculateSpendingStatus(
-                              monthlyGoal:
-                                  updatedCard.spendingGoal ??
-                                  appState.monthlyGoal,
-                              todaySpending: updatedCard.totalAmount,
-                            ).color;
-                    appState.setStatusColor(color);
-                    Navigator.of(context).pop();
-                  } catch (e) {
-                    Navigator.of(context).pop();
+                    newCards[idx] = updatedCard;
+                    appState.setRegisterCards(newCards);
                   }
+                  // Update status color after adding expense
+                  final color =
+                      (updatedCard.spendingGoal ?? 0) == 0
+                          ? const Color.fromRGBO(247, 247, 249, 1)
+                          : calculateSpendingStatus(context).color;
+                  appState.setStatusColor(color);
+                  Navigator.of(context).pop();
                 }
               },
               child: const Text('추가'),
@@ -324,6 +282,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+
     return Scaffold(
       backgroundColor: const Color.fromRGBO(247, 247, 249, 1),
       appBar: AppBar(
@@ -367,67 +326,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             monthlyGoal: appState.monthlyGoal,
           ),
           HomeContent(
-            registerCardRepo: _registerCardRepo,
-            userName: userName,
-            monthlyGoal: appState.monthlyGoal,
-            todaySpending: appState.todaySpending,
-            selectedCard: appState.selectedCard,
-            statusColor: appState.statusColor,
-            registerCards: appState.registerCards,
-            isEditing: isEditing,
-            onEditingChanged: (bool editing) {
-              setState(() {
-                isEditing = editing;
-                if (isEditing) {
-                  _shakeController.repeat(reverse: true);
-                } else {
-                  _shakeController.stop();
-                }
-              });
-            },
-            onGoalSaved: (RegisterCardModel updatedCard) {
-              appState.selectCard(updatedCard);
-              final idx = appState.registerCards.indexWhere(
-                (c) => c.id == updatedCard.id,
-              );
-              if (idx != -1) {
-                final newCards = List<RegisterCardModel>.from(
-                  appState.registerCards,
-                );
-                newCards[idx] = updatedCard;
-                appState.setRegisterCards(newCards);
-              }
-              _calculateStatus();
-            },
-            onCardDeleted: (int index) async {
-              final cardId = appState.registerCards[index].id;
-              try {
-                await _registerCardRepo.deleteRegisterCard(cardId);
-                final newCards = List<RegisterCardModel>.from(
-                  appState.registerCards,
-                );
-                newCards.removeAt(index);
-                appState.setRegisterCards(newCards);
-                if (appState.selectedCard?.id == cardId) {
-                  appState.selectCard(null);
-                }
-                print('✅ Firestore에서 카드 삭제 성공');
-              } catch (e) {}
-            },
-            onCardSelected: (RegisterCardModel card) {
-              appState.selectCard(card);
-              setState(() {
-                currentPageIndex = 1;
-                pageController.animateToPage(
-                  1,
-                  duration: Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              });
-              _calculateStatus();
-            },
-            onShowAddCategoryDialog: _showAddCategoryDialog,
-            onAddExpense: _showAddExpenseDialog,
             pageController: pageController,
             currentPageIndex: currentPageIndex,
             onBackToCardGrid: (int pageIndex) {
@@ -460,60 +358,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               });
             },
             shakeAnimation: _shakeAnimation,
-            onExpenseDeleted: (int index) async {
-              if (appState.selectedCard == null) return;
-              final updatedExpenses = List<Map<String, dynamic>>.from(
-                appState.selectedCard!.expenses,
-              )..removeAt(index);
-              final updatedTotal = updatedExpenses.fold<int>(
-                0,
-                (sum, e) => sum + (e['price'] as int),
-              );
-              final updatedCard = appState.selectedCard!.copyWith(
-                expenses: updatedExpenses,
-                totalAmount: updatedTotal,
-              );
-              try {
-                await _registerCardRepo.updateRegisterCard(updatedCard);
-                appState.selectCard(updatedCard);
-                final idx = appState.registerCards.indexWhere(
-                  (c) => c.id == updatedCard.id,
-                );
-                if (idx != -1) {
-                  final newCards = List<RegisterCardModel>.from(
-                    appState.registerCards,
-                  );
-                  newCards[idx] = updatedCard;
-                  appState.setRegisterCards(newCards);
-                }
-                _calculateStatus();
-              } catch (e) {}
-            },
-            onExpenseNameChanged: (int index, String newName) async {
-              if (appState.selectedCard == null) return;
-              final updatedExpenses = List<Map<String, dynamic>>.from(
-                appState.selectedCard!.expenses,
-              );
-              updatedExpenses[index]['name'] = newName;
-              final updatedCard = appState.selectedCard!.copyWith(
-                expenses: updatedExpenses,
-              );
-              try {
-                await _registerCardRepo.updateRegisterCard(updatedCard);
-                appState.selectCard(updatedCard);
-                final idx = appState.registerCards.indexWhere(
-                  (c) => c.id == updatedCard.id,
-                );
-                if (idx != -1) {
-                  final newCards = List<RegisterCardModel>.from(
-                    appState.registerCards,
-                  );
-                  newCards[idx] = updatedCard;
-                  appState.setRegisterCards(newCards);
-                }
-                print('✅ Firestore에 지출 이름 수정됨');
-              } catch (e) {}
-            },
           ),
           GraphPage(registerCards: appState.registerCards),
           NotificationPage(),

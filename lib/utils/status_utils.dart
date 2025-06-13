@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../model/register_card_model.dart';
 import 'spending_calculator.dart';
-import '../data/register_card_repository.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../state/app_state.dart';
 
 class StatusResult {
   final int goal;
@@ -18,12 +18,11 @@ class StatusResult {
   });
 }
 
-Future<StatusResult> calculateStatusFromCard({
+Future<StatusResult> calculateStatusFromCard(
+  BuildContext context, {
   RegisterCardModel? selectedCard,
-  int? defaultGoal,
-  int? defaultSpending,
-  List<RegisterCardModel>? allCards,
 }) async {
+  final appState = Provider.of<AppState>(context, listen: false);
   int goal;
   int spending;
 
@@ -33,22 +32,11 @@ Future<StatusResult> calculateStatusFromCard({
     goal = selectedCard.spendingGoal!;
     spending = selectedCard.totalAmount;
   } else {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    final repo = RegisterCardRepository(userId: userId!);
-    final fetchedGoal = defaultGoal ?? await repo.getDefaultGoal();
-
-    goal = fetchedGoal;
-    spending =
-        defaultSpending ??
-        (allCards != null
-            ? RegisterCardModel.calculateTotalSpending(allCards)
-            : 0);
+    goal = appState.monthlyGoal;
+    spending = appState.todaySpending;
   }
 
-  final status = calculateSpendingStatus(
-    monthlyGoal: goal,
-    todaySpending: spending,
-  );
+  final status = calculateSpendingStatus(context);
 
   return StatusResult(
     goal: goal,

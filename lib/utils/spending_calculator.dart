@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
+import '../model/register_card_model.dart';
 
 class SpendingStatus {
   final String status;
@@ -12,18 +15,15 @@ class SpendingStatus {
   });
 }
 
-// monthlyGoal, todaySpending 외에 선택된 카드가 있을 때 그 카드의 값으로 계산할 수 있게 수정
-SpendingStatus calculateSpendingStatus({
-  required int? monthlyGoal,
-  required int todaySpending,
-  bool isCardSelected = false,
-  DateTime? todayDate,
-  int? defaultGoal,
-}) {
-  todayDate ??= DateTime.now();
+SpendingStatus calculateSpendingStatus(BuildContext context) {
+  final appState = Provider.of<AppState>(context, listen: false);
+  final int? goal = appState.selectedCard?.spendingGoal ?? appState.monthlyGoal;
 
-  // if no card selected, use defaultGoal passed as monthlyGoal
-  final int? goal = isCardSelected ? monthlyGoal : (defaultGoal ?? monthlyGoal);
+  // selectedCard가 null일 때 registerCards 총합을 todaySpending에 할당
+  final int todaySpending =
+      appState.selectedCard != null
+          ? appState.selectedCard!.totalAmount
+          : appState.totalSpending;
 
   if (goal == null || goal == 0) {
     return SpendingStatus(
@@ -33,6 +33,7 @@ SpendingStatus calculateSpendingStatus({
     );
   }
 
+  final DateTime todayDate = DateTime.now();
   final int dayPassed = todayDate.day;
   final double dailyGoal = goal / 30;
   final double recommendedSpending = dailyGoal * dayPassed;

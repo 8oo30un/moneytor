@@ -1,12 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/progress_bar.dart';
 import '../model/register_card_model.dart';
-import '../data/register_card_repository.dart';
-import '../utils/status_utils.dart';
-import '../utils/spending_calculator.dart';
+import '../utils/spending_calculator.dart' as spending_calculator;
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 
 class CardSpendingSummary extends StatefulWidget {
   final RegisterCardModel? selectedCard;
@@ -14,7 +12,6 @@ class CardSpendingSummary extends StatefulWidget {
   final int monthlyGoal;
   final Color statusColor;
   final String userId;
-  final Function(RegisterCardModel? updatedCard) onGoalSaved;
   final List<RegisterCardModel> registerCards;
   final Function(int updatedDefaultGoal)? onDefaultGoalChanged;
 
@@ -25,7 +22,6 @@ class CardSpendingSummary extends StatefulWidget {
     required this.monthlyGoal,
     required this.statusColor,
     required this.userId,
-    required this.onGoalSaved,
     required this.registerCards,
     this.onDefaultGoalChanged,
   });
@@ -38,119 +34,50 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
   bool isEditingGoal = false;
   final TextEditingController _goalController = TextEditingController();
 
-  Future<void> _loadDefaultGoal() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
-
-    try {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .get();
-      if (doc.exists) {
-        final data = doc.data();
-        final int defaultGoal = data?['defaultGoal'] ?? 0;
-        setState(() {
-          _goalController.text = defaultGoal.toString();
-        });
-        if (widget.onDefaultGoalChanged != null) {
-          widget.onDefaultGoalChanged!(defaultGoal);
-        }
-        print('[DEBUG] Firestore에서 불러온 defaultGoal: $defaultGoal');
-      }
-    } catch (e) {
-      print('[ERROR] defaultGoal 불러오기 실패: $e');
-    }
-  }
-
-  Future<void> _saveSpendingGoal(int goal) async {
-    final updatedCard = widget.selectedCard!.copyWith(
-      spendingGoal: goal,
-      totalAmount: widget.selectedCard!.totalAmount,
-    );
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
-
-    final repo = RegisterCardRepository(userId: userId);
-    await repo.updateRegisterCard(updatedCard);
-    widget.onGoalSaved(updatedCard);
-    setState(() {
-      _goalController.text = goal.toString();
-      isEditingGoal = false;
-    });
-  }
-
-  Future<void> _calculateStatus() async {
-    final result = await calculateStatusFromCard(
-      selectedCard: widget.selectedCard,
-      defaultGoal: widget.monthlyGoal,
-      defaultSpending: widget.todaySpending,
-      allCards: widget.registerCards,
-    );
-
-    print('Calculated monthlyGoal: ${result.goal}');
-
-    setState(() {
-      _goalController.text = result.goal.toString();
-      isEditingGoal = true;
-    });
-  }
-
-  Future<void> _updateUserStatus(
-    String userId,
-    int goal,
-    int spending,
-    SpendingStatus status,
-  ) async {
-    await FirebaseFirestore.instance.collection('users').doc(userId).update({
-      'lastCalculatedGoal': goal,
-      'lastCalculatedSpending': spending,
-      'lastCalculatedStatus': status.status,
-      'lastCalculatedColor': status.color.value,
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final List<RegisterCardModel> registerCards = appState.registerCards;
+    final int defaultGoal = appState.defaultGoal;
+
     final totalSpending = RegisterCardModel.calculateTotalSpending(
-      widget.registerCards,
+      registerCards,
     );
     final card = widget.selectedCard;
-    final goal = card?.spendingGoal;
+    final goal =
+        card == null
+            ? appState.monthlyGoal
+            : (card.spendingGoal ??
+                appState.monthlyGoal); // null일 경우 defaultGoal 사용
     final int parsedGoal =
-        int.tryParse(_goalController.text) ?? (goal ?? widget.monthlyGoal);
+        int.tryParse(_goalController.text) ?? (goal ?? defaultGoal);
 
-    final status = calculateSpendingStatus(
-      monthlyGoal: parsedGoal,
-      todaySpending: card?.totalAmount ?? widget.todaySpending,
-    );
-    print(
-      '❤️ Status 계산됨 → goal: $parsedGoal, spending: ${card?.totalAmount ?? widget.todaySpending}, status: ${status.status}, color: ${status.color}',
-    );
-    // Update user's status data in Firestore
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      _updateUserStatus(
-        userId,
-        parsedGoal,
-        card?.totalAmount ?? widget.todaySpending,
-        status,
-      );
-    }
+    final now = DateTime.now();
+    final int daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+    final int today = now.day;
 
-    final Color backgroundColor =
-        goal == null ? const Color.fromRGBO(247, 247, 249, 1) : status.color;
+    final int adjustedGoal = ((goal / daysInMonth) * today).round();
+
+    final int spending =
+        card?.totalAmount ??
+        RegisterCardModel.calculateTotalSpending(registerCards);
+
+    final int adjustedSpending =
+        card == null
+            ? ((RegisterCardModel.calculateTotalSpending(registerCards) /
+                        daysInMonth) *
+                    today)
+                .round()
+            : ((card.totalAmount / daysInMonth) * today).round();
+
+    final status = spending_calculator.calculateSpendingStatus(context);
 
     if (card == null) {
       return _buildSummaryUI(
         title: DateFormat('yyyy년 M월 지출').format(DateTime.now()),
-        spending: totalSpending,
-        goal: widget.monthlyGoal,
-        status: calculateSpendingStatus(
-          monthlyGoal: widget.monthlyGoal,
-          todaySpending: totalSpending,
-        ),
+        spending: adjustedSpending,
+        goal: adjustedGoal,
+        status: status,
         backgroundColor: const Color.fromRGBO(247, 247, 249, 1),
       );
     }
@@ -167,11 +94,6 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // const Text(
-              //   '목표 지출을 설정해주세요',
-              //   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              // ),
-              // const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -188,23 +110,21 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                   ElevatedButton(
                     onPressed: () {
                       final goal = int.tryParse(_goalController.text);
-                      print('🎯 입력된 목표 지출(goal): $goal');
                       if (goal != null && goal >= 0) {
-                        _saveSpendingGoal(goal);
+                        final appState = Provider.of<AppState>(
+                          context,
+                          listen: false,
+                        );
+                        if (widget.selectedCard == null) {
+                          appState.setMonthlyGoal(goal);
+                        } else {
+                          final updatedCard = widget.selectedCard!.copyWith(
+                            spendingGoal: goal,
+                          );
+                          appState.updateCard(updatedCard, context);
+                        }
                         setState(() {
                           isEditingGoal = false;
-
-                          if (widget.selectedCard != null) {
-                            final updatedCard = widget.selectedCard!.copyWith(
-                              spendingGoal: goal,
-                            );
-                            final newStatus = calculateSpendingStatus(
-                              monthlyGoal: goal,
-                              todaySpending: updatedCard.totalAmount,
-                            );
-
-                            widget.onGoalSaved(updatedCard);
-                          }
                         });
                       }
                     },
@@ -233,12 +153,9 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
 
     return _buildSummaryUI(
       title: '${DateFormat('yyyy년 M월').format(DateTime.now())} ${card.name} 지출',
-      spending: card.totalAmount,
-      goal: card.spendingGoal ?? 0,
-      status: calculateSpendingStatus(
-        monthlyGoal: card.spendingGoal ?? widget.monthlyGoal,
-        todaySpending: card.totalAmount,
-      ),
+      spending: adjustedSpending,
+      goal: adjustedGoal,
+      status: status,
       backgroundColor: Color.fromRGBO(247, 247, 249, 1),
     );
   }
@@ -247,7 +164,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
     required String title,
     required int spending,
     required int goal,
-    required SpendingStatus status, // 추가
+    required spending_calculator.SpendingStatus status, // 추가
     required Color backgroundColor, // 추가
   }) {
     return Padding(
@@ -346,86 +263,34 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                               ),
                               const SizedBox(height: 16),
                               ElevatedButton(
-                                onPressed: () async {
+                                onPressed: () {
                                   final int? newGoal = int.tryParse(
                                     _goalController.text,
                                   );
-                                  // Debug print statements for logging
                                   print('[DEBUG] newGoal: $newGoal');
                                   print(
                                     '[DEBUG] selectedCard is null: ${widget.selectedCard == null}',
                                   );
+                                  final appState = Provider.of<AppState>(
+                                    context,
+                                    listen: false,
+                                  );
                                   if (newGoal != null && newGoal >= 0) {
                                     if (widget.selectedCard == null) {
-                                      final userId =
-                                          FirebaseAuth
-                                              .instance
-                                              .currentUser
-                                              ?.uid;
-                                      if (userId != null) {
-                                        final repo = RegisterCardRepository(
-                                          userId: userId,
-                                        );
-                                        await repo.updateDefaultGoal(newGoal);
-
-                                        await _loadDefaultGoal(); // 업데이트 후 최신 값 다시 불러오기
-                                        print(
-                                          '[DEBUG] 전체 목표 지출 수정 완료, onGoalSaved(null) 호출 전',
-                                        );
-
-                                        widget.onGoalSaved(null);
-                                        print(
-                                          '[DEBUG] onGoalSaved(null) 호출 완료',
-                                        );
-                                        setState(() {
-                                          _goalController.text =
-                                              newGoal.toString();
-                                          print(
-                                            '[DEBUG] setState 완료: _goalController.text=${_goalController.text}, isEditingGoal=$isEditingGoal',
-                                          );
-                                        });
-                                        Navigator.pop(context);
+                                      appState.setMonthlyGoal(newGoal);
+                                      if (widget.onDefaultGoalChanged != null) {
+                                        widget.onDefaultGoalChanged!(newGoal);
                                       }
                                     } else {
-                                      setState(() {
-                                        _goalController.text =
-                                            newGoal.toString();
-                                        isEditingGoal = true;
-                                      });
-
                                       final updatedCard = widget.selectedCard!
                                           .copyWith(spendingGoal: newGoal);
-                                      print(
-                                        '[DEBUG] updatedCard: $updatedCard',
-                                      );
-
-                                      // Save updatedCard to Firestore
-                                      final userId =
-                                          FirebaseAuth
-                                              .instance
-                                              .currentUser
-                                              ?.uid;
-                                      if (userId != null) {
-                                        final repo = RegisterCardRepository(
-                                          userId: userId,
-                                        );
-                                        await repo.updateRegisterCard(
-                                          updatedCard,
-                                        );
-
-                                        // Also update monthlyGoal field in Firestore (optional logic)
-                                        await FirebaseFirestore.instance
-                                            .collection('users')
-                                            .doc(userId)
-                                            .update({'monthlyGoal': newGoal});
-                                        print(
-                                          '[DEBUG] monthlyGoal 업데이트 완료: $newGoal',
-                                        );
-                                      }
-
-                                      widget.onGoalSaved(updatedCard);
-                                      Navigator.pop(context);
+                                      appState.updateCard(updatedCard, context);
                                     }
+                                    setState(() {
+                                      _goalController.text = newGoal.toString();
+                                      isEditingGoal = false;
+                                    });
+                                    Navigator.pop(context);
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(

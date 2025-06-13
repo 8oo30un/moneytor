@@ -3,6 +3,8 @@ import 'package:pie_chart/pie_chart.dart'
     as pc; // Make sure to add this package in pubspec.yaml
 import 'package:fl_chart/fl_chart.dart';
 import 'package:tuple/tuple.dart';
+import 'package:provider/provider.dart';
+import 'state/app_state.dart';
 import 'model/register_card_model.dart'; // Update the path according to your project structure
 import 'utils/status_utils.dart'; // or the correct path to calculateStatusFromCard
 
@@ -98,17 +100,18 @@ class _GraphPageState extends State<GraphPage> {
   }
 
   Future<String> _getStatusForCard(RegisterCardModel card) async {
-    final result = await calculateStatusFromCard(selectedCard: card);
+    final result = await calculateStatusFromCard(context, selectedCard: card);
     return result.status;
   }
 
-  Color _getWeeklyStatusBarColorForGraph() {
+  Color _getWeeklyStatusBarColorForGraph(BuildContext context) {
+    final appState = Provider.of<AppState>(context, listen: false);
+    final totalGoal = appState.monthlyGoal;
     final target = DateTime.now();
     final remainingDays =
         DateUtils.getDaysInMonth(target.year, target.month) - target.day;
     if (remainingDays < 1) return Colors.transparent;
 
-    const totalGoal = 1000000;
     final dailyGoal =
         totalGoal / DateUtils.getDaysInMonth(target.year, target.month);
     final weeklyGoal = (dailyGoal * 7).round();
@@ -142,8 +145,9 @@ class _GraphPageState extends State<GraphPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final totalGoal = appState.monthlyGoal;
     final totalSpending = categoryExpenseMap.values.fold(0.0, (a, b) => a + b);
-    const totalGoal = 1000000;
 
     return Scaffold(
       backgroundColor: Color.fromRGBO(247, 247, 249, 1),
@@ -196,8 +200,9 @@ class _GraphPageState extends State<GraphPage> {
                         // 주간 상태 말풍선
                         Builder(
                           builder: (context) {
-                            final color =
-                                this._getWeeklyStatusBarColorForGraph();
+                            final color = this._getWeeklyStatusBarColorForGraph(
+                              context,
+                            );
                             final text =
                                 color == const Color.fromRGBO(152, 219, 204, 1)
                                     ? '이번 주 지출이 안정적이에요 👍'
@@ -331,7 +336,10 @@ class _GraphPageState extends State<GraphPage> {
                           );
 
                           return FutureBuilder<StatusResult>(
-                            future: calculateStatusFromCard(selectedCard: card),
+                            future: calculateStatusFromCard(
+                              context,
+                              selectedCard: card,
+                            ),
                             builder: (context, snapshot) {
                               final color =
                                   snapshot.hasData

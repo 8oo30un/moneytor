@@ -1,4 +1,4 @@
-import 'package:moneytor/widgets/card_spending_summary.dart';
+import 'package:lottie/lottie.dart';
 import 'package:flutter/material.dart';
 
 class ListPage extends StatelessWidget {
@@ -7,20 +7,25 @@ class ListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromRGBO(247, 247, 249, 1),
       appBar: null,
-      body: Column(
-        children: [
-          CardSpendingSummary(
-            selectedCard: null,
-            todaySpending: 0,
-            monthlyGoal: 1000000,
-            statusColor: const Color.fromRGBO(247, 247, 249, 1),
-            userId: 'dummy_user',
-            onGoalSaved: (updatedCard) {},
-            registerCards: [],
-          ),
-          // ... other widgets go here
-        ],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Lottie.asset(
+              'assets/lottie/under_construction.json',
+              width: 150,
+              height: 150,
+              repeat: true,
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              '리스트 기능은 추후 개발될 예정입니다',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
     );
   }
