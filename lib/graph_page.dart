@@ -327,7 +327,7 @@ class _GraphPageState extends State<GraphPage> {
                             showChartValuesInPercentage: false,
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 30),
 
                         GridView.count(
                           crossAxisCount: 4,
@@ -397,10 +397,10 @@ class _GraphPageState extends State<GraphPage> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 10,
-                                          vertical: 4,
+                                          vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: statusColor.withOpacity(0.2),
+                                          color: statusColor.withOpacity(0.5),
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
@@ -408,8 +408,9 @@ class _GraphPageState extends State<GraphPage> {
                                         child: Text(
                                           '${percentage.toStringAsFixed(1)}%',
                                           style: TextStyle(
+                                            fontSize: 10,
                                             fontWeight: FontWeight.w600,
-                                            color: statusColor,
+                                            color: Colors.black38,
                                           ),
                                         ),
                                       ),

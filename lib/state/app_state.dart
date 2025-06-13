@@ -256,8 +256,18 @@ class AppState extends ChangeNotifier {
   // 카드 추가
   Future<void> addCard(String name, BuildContext context) async {
     try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) throw Exception('User not logged in');
+
+      final cardDocRef =
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .collection('register_cards')
+              .doc();
+
       final newCard = RegisterCardModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: cardDocRef.id,
         name: name,
         totalAmount: 0,
         expenses: [],
@@ -268,8 +278,13 @@ class AppState extends ChangeNotifier {
         '🆕 [addCard] 새 카드 생성: id=${newCard.id}, name=${newCard.name}, spendingGoal=${newCard.spendingGoal}, totalAmount=${newCard.totalAmount}',
       );
 
-      await _registerCardRepo.addRegisterCard(newCard);
-      print('✅ [addCard] Firestore에 새 카드 추가 완료');
+      await cardDocRef.set({
+        'name': newCard.name,
+        'totalAmount': newCard.totalAmount,
+        'expenses': newCard.expenses,
+        'spendingGoal': newCard.spendingGoal,
+      });
+      print('✅ [addCard] Firestore에 새 카드 추가 완료 (ID 자동 생성)');
 
       _registerCards.add(newCard);
       print('📋 [addCard] 내부 리스트에 새 카드 추가됨. 총 카드 수: ${_registerCards.length}');
@@ -599,17 +614,8 @@ class AppState extends ChangeNotifier {
         _loadRegisterCards(),
       ]);
       print('✅ reloadAllData completed loading all data');
-
-      print('🔍 _appContext is null? ${_appContext == null}');
-
-      if (_appContext != null) {
-        _calculateStatus();
-        print('✅ Status recalculated after reload');
-      } else {
-        // fallback: context 없이도 계산 가능하다면 호출
-        _calculateStatus();
-        print('✅ Status recalculated without _appContext');
-      }
+      _calculateStatus();
+      await updateTotalSpending(); // ✅ 여기 추가
     } catch (e) {
       print('초기 데이터 로드 실패: $e');
     } finally {
@@ -648,6 +654,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> updateTotalSpending() async {
+    print('🔄 [updateTotalSpending] _calculateStatus() 호출');
+    _calculateStatus();
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
