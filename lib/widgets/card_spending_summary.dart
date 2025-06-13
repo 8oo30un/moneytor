@@ -239,6 +239,14 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                     ),
                     builder: (_) {
                       final isCardMode = widget.selectedCard != null;
+
+                      _goalController.text =
+                          isCardMode
+                              ? (widget.selectedCard?.spendingGoal
+                                      ?.toString() ??
+                                  '')
+                              : context.read<AppState>().monthlyGoal.toString();
+
                       return Padding(
                         padding: EdgeInsets.only(
                           bottom: MediaQuery.of(context).viewInsets.bottom,

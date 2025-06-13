@@ -134,9 +134,12 @@ class _GraphPageState extends State<GraphPage> {
       }
     }
 
-    if (projectedSpending < weeklyGoal * 0.8) {
+    debugPrint('📊 [DEBUG] projectedSpending: $projectedSpending');
+    debugPrint('📊 [DEBUG] weeklyGoal: $weeklyGoal');
+
+    if (projectedSpending < weeklyGoal * 0.9) {
       return const Color.fromRGBO(152, 219, 204, 1); // 절약
-    } else if (projectedSpending <= weeklyGoal * 1.2) {
+    } else if (projectedSpending <= weeklyGoal * 1.1) {
       return const Color.fromRGBO(161, 227, 249, 1); // 평균
     } else {
       return const Color.fromRGBO(255, 187, 135, 1); // 과소비
