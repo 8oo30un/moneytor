@@ -1,5 +1,6 @@
 // lib/home.dart
 import 'package:flutter/material.dart';
+import 'state/app_state.dart';
 import 'utils/spending_calculator.dart';
 import 'model/register_card_model.dart';
 import 'utils/status_utils.dart';
@@ -10,7 +11,7 @@ import 'notification_page.dart';
 import 'user_page.dart';
 import 'list_page.dart';
 import 'package:provider/provider.dart';
-import 'state/app_state.dart';
+import '../state/app_state.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -42,6 +43,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+
     // Initialize UI related controllers
     _pageController = PageController(initialPage: _selectedIndex);
     _shakeController = AnimationController(

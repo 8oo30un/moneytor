@@ -64,7 +64,7 @@ class AppState extends ChangeNotifier {
   // Getters
   String get userName => _userName;
   String? get photoUrl => _photoUrl;
-  int get defaultGoal => _defaultGoal;
+  int get defaultGoal => 0;
   int get monthlyGoal => _monthlyGoal;
   int get todaySpending => _todaySpending;
   int get totalSpending => _totalSpending;
@@ -264,12 +264,20 @@ class AppState extends ChangeNotifier {
         spendingGoal: null,
       );
 
+      print(
+        '🆕 [addCard] 새 카드 생성: id=${newCard.id}, name=${newCard.name}, spendingGoal=${newCard.spendingGoal}, totalAmount=${newCard.totalAmount}',
+      );
+
       await _registerCardRepo.addRegisterCard(newCard);
+      print('✅ [addCard] Firestore에 새 카드 추가 완료');
+
       _registerCards.add(newCard);
+      print('📋 [addCard] 내부 리스트에 새 카드 추가됨. 총 카드 수: ${_registerCards.length}');
+
       _calculateStatus();
       notifyListeners();
     } catch (e) {
-      print('카드 추가 실패: $e');
+      print('❌ 카드 추가 실패: $e');
     }
   }
 
@@ -552,11 +560,15 @@ class AppState extends ChangeNotifier {
         orElse: () => RegisterCardModel.empty(),
       );
       if (card.id == '') {
-        return const Color.fromRGBO(247, 247, 249, 1);
+        return const Color.fromRGBO(247, 247, 249, 1); // 미설정 회색
       }
 
       final goal = card.spendingGoal ?? defaultGoal;
-      if (goal == 0) return const Color.fromRGBO(247, 247, 249, 1);
+      // spendingGoal이 0이면 무조건 미설정 색상 반환
+      if (goal == 0) {
+        return const Color.fromRGBO(247, 247, 249, 1);
+      }
+
       final DateTime todayDate = DateTime.now();
       final int dayPassed = todayDate.day;
       final double dailyGoal = goal / 30;
@@ -570,11 +582,13 @@ class AppState extends ChangeNotifier {
         return const Color.fromRGBO(152, 219, 204, 1); // 평균
       }
     } catch (_) {
-      return Colors.grey;
+      return const Color.fromRGBO(247, 247, 249, 1); // 오류시 미설정 색상 반환
     }
   }
 
   Future<void> reloadAllData(BuildContext context) async {
+    print('🌀 reloadAllData start');
+
     _setLoading(true);
     notifyListeners();
 
@@ -584,8 +598,17 @@ class AppState extends ChangeNotifier {
         _loadDefaultGoal(),
         _loadRegisterCards(),
       ]);
+      print('✅ reloadAllData completed loading all data');
+
+      print('🔍 _appContext is null? ${_appContext == null}');
+
       if (_appContext != null) {
         _calculateStatus();
+        print('✅ Status recalculated after reload');
+      } else {
+        // fallback: context 없이도 계산 가능하다면 호출
+        _calculateStatus();
+        print('✅ Status recalculated without _appContext');
       }
     } catch (e) {
       print('초기 데이터 로드 실패: $e');

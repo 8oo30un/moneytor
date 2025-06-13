@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'state/app_state.dart';
 import 'model/register_card_model.dart'; // Update the path according to your project structure
 import 'utils/status_utils.dart'; // or the correct path to calculateStatusFromCard
+import '../state/app_state.dart';
 
 /// GraphPage displays a pie chart of expenses per category (register card).
 ///
@@ -20,6 +21,14 @@ class GraphPage extends StatefulWidget {
 }
 
 class _GraphPageState extends State<GraphPage> {
+  static const List<Color> pieChartColors = [
+    Color(0xFF4CAF50), // green
+    Color(0xFF2196F3), // blue
+    Color(0xFFFFC107), // amber
+    Color(0xFFF44336), // red
+    Color(0xFF9C27B0), // purple
+    Color(0xFF00BCD4), // cyan
+  ];
   Map<String, double> categoryExpenseMap = {};
   List<BarChartGroupData> _barChartGroups = [];
   List<String> _sortedMonthKeys = [];
@@ -242,7 +251,7 @@ class _GraphPageState extends State<GraphPage> {
                         const Text(
                           '월별 소비 추이',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -299,7 +308,7 @@ class _GraphPageState extends State<GraphPage> {
                         const Text(
                           '카테고리별 소비 비율',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -319,75 +328,96 @@ class _GraphPageState extends State<GraphPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        ...categoryExpenseMap.entries.map((entry) {
-                          final total = categoryExpenseMap.values.fold<double>(
-                            0,
-                            (sum, e) => sum + e,
-                          );
-                          final percentage =
-                              total == 0 ? 0 : (entry.value / total) * 100;
 
-                          final card = widget.registerCards.firstWhere(
-                            (c) => c.name == entry.key,
-                            orElse:
-                                () => RegisterCardModel(
-                                  id: '',
-                                  name: entry.key,
-                                  expenses: [],
-                                  totalAmount: 0,
-                                ),
-                          );
+                        GridView.count(
+                          crossAxisCount: 4,
+                          shrinkWrap: true,
+                          crossAxisSpacing: 6,
+                          mainAxisSpacing: 6,
+                          childAspectRatio: 1.25,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children:
+                              categoryExpenseMap.entries.map((entry) {
+                                final total = categoryExpenseMap.values
+                                    .fold<double>(0, (sum, e) => sum + e);
+                                final percentage =
+                                    total == 0
+                                        ? 0
+                                        : (entry.value / total) * 100;
 
-                          return FutureBuilder<StatusResult>(
-                            future: calculateStatusFromCard(
-                              context,
-                              selectedCard: card,
-                            ),
-                            builder: (context, snapshot) {
-                              final color =
-                                  snapshot.hasData
-                                      ? snapshot.data!.color.withOpacity(0.7)
-                                      : Colors.grey.withOpacity(0.3);
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 6.0,
-                                ),
-                                child: Container(
+                                final card = widget.registerCards.firstWhere(
+                                  (c) => c.name == entry.key,
+                                  orElse:
+                                      () => RegisterCardModel(
+                                        id: '',
+                                        name: entry.key,
+                                        expenses: [],
+                                        totalAmount: 0,
+                                      ),
+                                );
+
+                                final statusColor = appState.getCardStatusColor(
+                                  card.id,
+                                );
+                                final cardIndex = widget.registerCards
+                                    .indexWhere((c) => c.name == entry.key);
+                                final pieColor =
+                                    cardIndex != -1
+                                        ? pieChartColors[cardIndex %
+                                            pieChartColors.length]
+                                        : Colors.grey.shade300;
+
+                                return Container(
                                   decoration: BoxDecoration(
-                                    color: color,
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: statusColor.withOpacity(0.8),
+                                      width: 1,
+                                    ),
                                   ),
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                    horizontal: 12,
+                                    // vertical: 3,
+                                    horizontal: 8,
                                   ),
-                                  child: Row(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Expanded(
-                                        child: Text(
-                                          entry.key,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.black,
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                      Text(
+                                        entry.key,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
                                         ),
                                       ),
-                                      Text(
-                                        '${percentage.toStringAsFixed(1)}%',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: statusColor.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${percentage.toStringAsFixed(1)}%',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: statusColor,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              );
-                            },
-                          );
-                        }),
+                                );
+                              }).toList(),
+                        ),
                       ],
                     ),
                   ),
