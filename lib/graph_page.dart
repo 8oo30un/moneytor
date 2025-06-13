@@ -205,10 +205,10 @@ class _GraphPageState extends State<GraphPage> {
                             );
                             final text =
                                 color == const Color.fromRGBO(152, 219, 204, 1)
-                                    ? '이번 주 지출이 안정적이에요 👍'
+                                    ? '이번 주 지출이 평균적이에요 📊'
                                     : color ==
                                         const Color.fromRGBO(161, 227, 249, 1)
-                                    ? '이번 주 지출이 평균적이에요 📊'
+                                    ? '이번 주 지출이 안정적이에요 👍'
                                     : '주의: 이번 주 예상 지출이 초과될 수 있어요 💸';
 
                             return Container(

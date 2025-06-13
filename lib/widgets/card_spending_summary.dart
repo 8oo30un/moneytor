@@ -122,6 +122,9 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                             spendingGoal: goal,
                           );
                           appState.updateCard(updatedCard, context);
+                          appState.selectCard(
+                            updatedCard,
+                          ); // 선택된 카드 다시 설정하여 상태 계산
                         }
                         setState(() {
                           isEditingGoal = false;
@@ -263,28 +266,38 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                               ),
                               const SizedBox(height: 16),
                               ElevatedButton(
-                                onPressed: () {
+                                onPressed: () async {
                                   final int? newGoal = int.tryParse(
                                     _goalController.text,
                                   );
-                                  print('[DEBUG] newGoal: $newGoal');
+                                  print('🛠️ 입력된 목표 지출 값: $newGoal');
+                                  print('🛠️ 선택된 카드 모드: $isCardMode');
                                   print(
-                                    '[DEBUG] selectedCard is null: ${widget.selectedCard == null}',
+                                    '🛠️ 선택된 카드: ${widget.selectedCard?.name}',
                                   );
                                   final appState = Provider.of<AppState>(
                                     context,
                                     listen: false,
                                   );
                                   if (newGoal != null && newGoal >= 0) {
-                                    if (widget.selectedCard == null) {
+                                    if (isCardMode &&
+                                        widget.selectedCard != null) {
+                                      final updatedCard = widget.selectedCard!
+                                          .copyWith(spendingGoal: newGoal);
+                                      await appState.updateCard(
+                                        updatedCard,
+                                        context,
+                                      );
+                                      print(
+                                        '📝 업데이트된 카드 목표 지출: ${updatedCard.spendingGoal}',
+                                      );
+                                      await appState.selectCard(updatedCard);
+                                    } else {
                                       appState.setMonthlyGoal(newGoal);
+                                      print('📌 전체 monthlyGoal 설정됨: $newGoal');
                                       if (widget.onDefaultGoalChanged != null) {
                                         widget.onDefaultGoalChanged!(newGoal);
                                       }
-                                    } else {
-                                      final updatedCard = widget.selectedCard!
-                                          .copyWith(spendingGoal: newGoal);
-                                      appState.updateCard(updatedCard, context);
                                     }
                                     setState(() {
                                       _goalController.text = newGoal.toString();

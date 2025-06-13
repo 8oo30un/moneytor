@@ -34,7 +34,11 @@ class SpendingStatusDisplay extends StatelessWidget {
         (baseSpending / currentDay * daysInMonth).round();
 
     final int? goal =
-        selectedCard?.spendingGoal ?? (monthlyGoal == 0 ? null : monthlyGoal);
+        (selectedCard != null)
+            ? (selectedCard!.spendingGoal == 0
+                ? null
+                : selectedCard!.spendingGoal)
+            : (monthlyGoal == 0 ? null : monthlyGoal);
     final int? estimatedGoalSpending =
         goal != null ? (goal / daysInMonth * currentDay).round() : null;
 
@@ -53,8 +57,6 @@ class SpendingStatusDisplay extends StatelessWidget {
     }
 
     final status = calculateSpendingStatus(context);
-
-    print('[DEBUG] status: ${status.status}, color: ${status.color}');
 
     final isAverage = status.status == '평균';
 

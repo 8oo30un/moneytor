@@ -82,9 +82,22 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setMonthlyGoal(int goal) {
+  Future<void> setMonthlyGoal(int goal) async {
     _monthlyGoal = goal;
+    _calculateStatus(); // 👈 상태와 색상 업데이트 추가
     notifyListeners();
+
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'monthlyGoal': goal,
+      });
+      print('✅ [setMonthlyGoal] Firestore에 monthlyGoal 업데이트 완료: $goal');
+    } catch (e) {
+      print('❌ [setMonthlyGoal] Firestore 업데이트 실패: $e');
+    }
   }
 
   void setTodaySpending(int spending) {
@@ -97,7 +110,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void selectCard(RegisterCardModel? card) {
+  Future<void> selectCard(RegisterCardModel? card) async {
     _selectedCard = card;
     _calculateStatus(); // context 없이 상태 계산
 
@@ -105,14 +118,50 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateCard(RegisterCardModel card, BuildContext context) {
+  Future<void> updateCard(RegisterCardModel card, BuildContext context) async {
+    print(
+      '📥 [updateCard] 입력된 카드 ID: ${card.id}, 이름: ${card.name}, 목표지출: ${card.spendingGoal}, 총 지출: ${card.totalAmount}',
+    );
     final index = _registerCards.indexWhere((c) => c.id == card.id);
     if (index != -1) {
       _registerCards[index] = card;
+      print('✅ [updateCard] 내부 리스트에 카드 업데이트 완료');
       if (_selectedCard?.id == card.id) {
         _selectedCard = card;
       }
+
+      // Firestore 업데이트
+      print('📡 [updateCard] Firestore 업데이트 시도 중...');
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        final docRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('register_cards')
+            .doc(card.id);
+
+        final docSnapshot = await docRef.get();
+        if (docSnapshot.exists) {
+          await docRef.update({
+            'spendingGoal': card.spendingGoal,
+            'totalAmount': card.totalAmount,
+            'expenses': card.expenses,
+            'name': card.name,
+          });
+          print('✅ [updateCard] 문서 업데이트 완료');
+        } else {
+          await docRef.set({
+            'spendingGoal': card.spendingGoal,
+            'totalAmount': card.totalAmount,
+            'expenses': card.expenses,
+            'name': card.name,
+          });
+          print('🆕 [updateCard] 문서가 없어서 새로 생성함');
+        }
+      }
+
       _calculateStatus();
+      print('🔄 [updateCard] 상태 재계산 완료');
       notifyListeners();
     }
   }
@@ -395,35 +444,26 @@ class AppState extends ChangeNotifier {
       print('🔍 Selected card goal: $goal');
       print('🔍 Selected card totalAmount: $spending');
     } else {
-      goal = _defaultGoal;
+      goal = _monthlyGoal > 0 ? _monthlyGoal : _defaultGoal;
       spending = RegisterCardModel.calculateTotalSpending(_registerCards);
       print('🔍 No selected card, using all cards total spending');
     }
 
-    if (goal == 0) {
-      // 목표가 없으면 기본 회색 상태로
-      _statusColor = const Color.fromRGBO(247, 247, 249, 1);
-    } else {
-      final adjustedSpending = (spending / daysInMonth) * dayOfMonth;
-      _todaySpending = adjustedSpending.round();
+    final adjustedSpending = (spending / daysInMonth) * dayOfMonth;
+    _todaySpending = adjustedSpending.round();
+    _totalSpending = RegisterCardModel.calculateTotalSpending(_registerCards);
+    final recommended = (goal / daysInMonth) * dayOfMonth;
+    _recommendedSpending = recommended.round();
 
-      _monthlyGoal = goal;
-      _totalSpending = RegisterCardModel.calculateTotalSpending(_registerCards);
+    print('🐥 Total Spending: $_totalSpending');
+    print('📌 Recommended Spending: $_recommendedSpending');
+    print('🧮 Adjusted Today Spending: $_todaySpending');
 
-      final recommended = (goal / daysInMonth) * dayOfMonth;
-      _recommendedSpending = recommended.round();
-
-      print('🐥 Total Spending: $_totalSpending');
-      print('📌 Recommended Spending: $_recommendedSpending');
-      print('🧮 Adjusted Today Spending: $_todaySpending');
-
-      // 상태 계산 함수 호출
-      final status = calculateSpendingStatusNoContext(
-        goal: goal,
-        spending: _todaySpending,
-      );
-      _statusColor = status.color;
-    }
+    final status = calculateSpendingStatusNoContext(
+      goal: goal,
+      spending: _todaySpending,
+    );
+    _statusColor = status.color;
 
     notifyListeners();
   }
@@ -582,5 +622,49 @@ class AppState extends ChangeNotifier {
 
     _setLoading(false);
     notifyListeners();
+  }
+
+  Future<void> updateTotalSpending() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    if (_selectedCard != null) {
+      // Debug prints before Firestore update
+      print('📡 [updateTotalSpending] 카드 기반 업데이트 시도');
+      print('🆔 카드 ID: ${_selectedCard!.id}');
+      print('🎯 목표 지출: ${_selectedCard!.spendingGoal}');
+      print('💰 총 지출: ${_selectedCard!.totalAmount}');
+      final updatedCard = _selectedCard!.copyWith(
+        spendingGoal: _selectedCard!.spendingGoal,
+      );
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('register_cards')
+          .doc(updatedCard.id)
+          .update({
+            'spendingGoal': updatedCard.spendingGoal ?? 0,
+            'totalAmount': updatedCard.totalAmount,
+          });
+    } else {
+      print('📤 Firestore 경로 확인: /users/$userId');
+      print('🎯 월간 목표 지출: $_monthlyGoal');
+      print('💰 전체 총 지출: $_totalSpending');
+      print('📅 오늘 계산된 지출: $_todaySpending');
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId);
+      await userRef.update({
+        'monthlyGoal': _monthlyGoal,
+        'totalSpending': _totalSpending,
+        'lastCalculatedSpending': _todaySpending,
+      });
+      print('✅ 월간 목표 및 지출 Firestore 업데이트 완료');
+    }
+
+    print('📦 Firestore 업데이트 완료 후 상태 출력');
+    print(
+      '✅ Firestore 업데이트됨 ➜ selectedCard: ${_selectedCard?.name}, goal: ${_selectedCard?.spendingGoal ?? _monthlyGoal}, spending: ${_selectedCard?.totalAmount ?? _totalSpending}, today: $_todaySpending',
+    );
   }
 }

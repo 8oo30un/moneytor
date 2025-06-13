@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'model/register_card_model.dart';
 import 'widgets/spending_status_display.dart';
 import 'widgets/card_spending_summary.dart' as summary;
+import 'package:tuple/tuple.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'widgets/card_spending_detail_grid.dart';
 import 'utils/spending_calculator.dart' as calc;
@@ -56,27 +57,72 @@ class _HomeContentState extends State<HomeContent> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1) SpendingStatusDisplay
-            SpendingStatusDisplay(
-              userName: appState.userName,
-              monthlyGoal: appState.monthlyGoal,
-              todaySpending: appState.todaySpending,
-              selectedCard: appState.selectedCard,
-              registerCards: appState.registerCards,
-              totalSpending: appState.totalSpending,
+            // 1) SpendingStatusDisplay (Selector)
+            Selector<
+              AppState,
+              Tuple6<
+                String,
+                int,
+                int,
+                RegisterCardModel?,
+                List<RegisterCardModel>,
+                int
+              >
+            >(
+              selector:
+                  (_, appState) => Tuple6(
+                    appState.userName,
+                    appState.monthlyGoal,
+                    appState.todaySpending,
+                    appState.selectedCard,
+                    appState.registerCards,
+                    appState.totalSpending,
+                  ),
+              builder: (context, data, child) {
+                final userName = data.item1;
+                final monthlyGoal = data.item2;
+                final todaySpending = data.item3;
+                final selectedCard = data.item4;
+                final registerCards = data.item5;
+                final totalSpending = data.item6;
+
+                return SpendingStatusDisplay(
+                  userName: userName,
+                  monthlyGoal: monthlyGoal,
+                  todaySpending: todaySpending,
+                  selectedCard: selectedCard,
+                  registerCards: registerCards,
+                  totalSpending: totalSpending,
+                );
+              },
             ),
 
-            // 2) CardSpendingSummary
-            summary.CardSpendingSummary(
-              selectedCard: appState.selectedCard,
-              todaySpending: appState.todaySpending,
-              monthlyGoal: appState.monthlyGoal,
-              statusColor: appState.statusColor,
-              registerCards: appState.registerCards,
-              userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+            // 2) CardSpendingSummary (Selector)
+            Selector<AppState, Tuple4<RegisterCardModel?, int, int, Color>>(
+              selector:
+                  (_, appState) => Tuple4(
+                    appState.selectedCard,
+                    appState.todaySpending,
+                    appState.monthlyGoal,
+                    appState.statusColor,
+                  ),
+              builder: (context, data, child) {
+                final selectedCard = data.item1;
+                final todaySpending = data.item2;
+                final monthlyGoal = data.item3;
+                final statusColor = data.item4;
 
-              onDefaultGoalChanged: (goal) {
-                appState.setDefaultGoal(goal, context);
+                return summary.CardSpendingSummary(
+                  selectedCard: selectedCard,
+                  todaySpending: todaySpending,
+                  monthlyGoal: monthlyGoal,
+                  statusColor: statusColor,
+                  registerCards: context.read<AppState>().registerCards,
+                  userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                  onDefaultGoalChanged: (goal) {
+                    context.read<AppState>().setDefaultGoal(goal, context);
+                  },
+                );
               },
             ),
 

@@ -21,7 +21,7 @@ class ListPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              '리스트 기능은 추후 개발될 예정입니다',
+              '리스트 기능은 현재 개발중입니다',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ],
