@@ -97,6 +97,20 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
     });
   }
 
+  Future<void> _updateUserStatus(
+    String userId,
+    int goal,
+    int spending,
+    SpendingStatus status,
+  ) async {
+    await FirebaseFirestore.instance.collection('users').doc(userId).update({
+      'lastCalculatedGoal': goal,
+      'lastCalculatedSpending': spending,
+      'lastCalculatedStatus': status.status,
+      'lastCalculatedColor': status.color.value,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalSpending = RegisterCardModel.calculateTotalSpending(
@@ -104,13 +118,26 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
     );
     final card = widget.selectedCard;
     final goal = card?.spendingGoal;
+    final int parsedGoal =
+        int.tryParse(_goalController.text) ?? (goal ?? widget.monthlyGoal);
+
     final status = calculateSpendingStatus(
-      monthlyGoal: goal ?? widget.monthlyGoal,
+      monthlyGoal: parsedGoal,
       todaySpending: card?.totalAmount ?? widget.todaySpending,
     );
     print(
-      '❤️ Status 계산됨 → goal: ${goal ?? widget.monthlyGoal}, spending: ${card?.totalAmount ?? widget.todaySpending}, status: ${status.status}, color: ${status.color}',
+      '❤️ Status 계산됨 → goal: $parsedGoal, spending: ${card?.totalAmount ?? widget.todaySpending}, status: ${status.status}, color: ${status.color}',
     );
+    // Update user's status data in Firestore
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      _updateUserStatus(
+        userId,
+        parsedGoal,
+        card?.totalAmount ?? widget.todaySpending,
+        status,
+      );
+    }
 
     final Color backgroundColor =
         goal == null ? const Color.fromRGBO(247, 247, 249, 1) : status.color;
@@ -309,7 +336,7 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 30),
                               TextField(
                                 controller: _goalController,
                                 keyboardType: TextInputType.number,

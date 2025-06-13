@@ -16,11 +16,16 @@ class SpendingStatus {
 SpendingStatus calculateSpendingStatus({
   required int? monthlyGoal,
   required int todaySpending,
+  bool isCardSelected = false,
   DateTime? todayDate,
+  int? defaultGoal,
 }) {
   todayDate ??= DateTime.now();
 
-  if (monthlyGoal == null || monthlyGoal == 0) {
+  // if no card selected, use defaultGoal passed as monthlyGoal
+  final int? goal = isCardSelected ? monthlyGoal : (defaultGoal ?? monthlyGoal);
+
+  if (goal == null || goal == 0) {
     return SpendingStatus(
       status: '미설정',
       color: const Color.fromRGBO(247, 247, 249, 1), // 기본 회색
@@ -29,7 +34,7 @@ SpendingStatus calculateSpendingStatus({
   }
 
   final int dayPassed = todayDate.day;
-  final double dailyGoal = monthlyGoal / 30;
+  final double dailyGoal = goal / 30;
   final double recommendedSpending = dailyGoal * dayPassed;
 
   if (todaySpending > recommendedSpending * 1.1) {

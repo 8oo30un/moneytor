@@ -339,11 +339,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
                       // ✅ Update status color after adding expense
                       statusColor =
-                          calculateSpendingStatus(
-                            monthlyGoal:
-                                updatedCard.spendingGoal ?? monthlyGoal,
-                            todaySpending: updatedCard.totalAmount,
-                          ).color;
+                          (updatedCard.spendingGoal ?? 0) == 0
+                              ? const Color.fromRGBO(
+                                247,
+                                247,
+                                249,
+                                1,
+                              ) // 목표 없음: 회색
+                              : calculateSpendingStatus(
+                                monthlyGoal:
+                                    updatedCard.spendingGoal ?? monthlyGoal,
+                                todaySpending: updatedCard.totalAmount,
+                              ).color;
                     });
                     Navigator.of(context).pop();
                   } catch (e) {
