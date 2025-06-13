@@ -369,6 +369,31 @@ class _CardSpendingSummaryState extends State<CardSpendingSummary> {
                                       print(
                                         '[DEBUG] updatedCard: $updatedCard',
                                       );
+
+                                      // Save updatedCard to Firestore
+                                      final userId =
+                                          FirebaseAuth
+                                              .instance
+                                              .currentUser
+                                              ?.uid;
+                                      if (userId != null) {
+                                        final repo = RegisterCardRepository(
+                                          userId: userId,
+                                        );
+                                        await repo.updateRegisterCard(
+                                          updatedCard,
+                                        );
+
+                                        // Also update monthlyGoal field in Firestore (optional logic)
+                                        await FirebaseFirestore.instance
+                                            .collection('users')
+                                            .doc(userId)
+                                            .update({'monthlyGoal': newGoal});
+                                        print(
+                                          '[DEBUG] monthlyGoal 업데이트 완료: $newGoal',
+                                        );
+                                      }
+
                                       widget.onGoalSaved(updatedCard);
                                       Navigator.pop(context);
                                     }

@@ -7,20 +7,25 @@ class SpendingStatusDisplay extends StatelessWidget {
   final int monthlyGoal;
   final int todaySpending;
   final RegisterCardModel? selectedCard;
+  final List<RegisterCardModel> registerCards;
 
   const SpendingStatusDisplay({
     super.key,
     required this.userName,
     required this.monthlyGoal,
     required this.todaySpending,
+    required this.registerCards,
     this.selectedCard,
   });
 
   @override
   Widget build(BuildContext context) {
+    final int spending = selectedCard?.totalAmount ?? todaySpending;
+
+    print('🔥🔥🔥 spending: $spending');
+
     final int? goal =
         selectedCard?.spendingGoal ?? (monthlyGoal == 0 ? null : monthlyGoal);
-    final int spending = selectedCard?.totalAmount ?? todaySpending;
 
     if (goal == null) {
       return const Padding(
