@@ -1,12 +1,16 @@
 # Moneytor - 개인 맞춤형 지출 관리 앱
 
-<div align="center" style="display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;">
-  <img src="assets/icon/app_icon.png" width="120" alt="Moneytor Icon" />
-  <p align="left" style="max-width: 400px;">
-    Flutter와 Firebase 기반의 지출 관리 앱 <strong>Moneytor</strong>는 사용자의 <strong>카테고리별 지출 습관</strong>을 분석하여,<br/>
-    월별 예산 설정, 실시간 소비 현황 추적, 과소비 경고 등 <strong>개인 맞춤형 피드백</strong>을 제공합니다.
-  </p>
-</div>
+<table>
+  <tr>
+    <td><img src="assets/icon/app_icon.png" width="100" alt="Moneytor Icon" /></td>
+    <td>
+      <strong>Moneytor</strong>는 Flutter와 Firebase 기반의 지출 관리 앱으로,<br/>
+      사용자의 <strong>카테고리별 지출 습관</strong>을 분석하여,<br/>
+      월별 예산 설정, 실시간 소비 현황 추적, 과소비 경고 등<br/>
+      <strong>개인 맞춤형 피드백</strong>을 제공합니다.
+    </td>
+  </tr>
+</table>
 
 ---
 
