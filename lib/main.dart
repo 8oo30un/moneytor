@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: const LoginPage(),
       routes: {
         '/login': (context) => const LoginPage(), // ✅ 로그인 경로 추가
       },
